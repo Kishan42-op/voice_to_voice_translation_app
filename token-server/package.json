@@ -1,0 +1,13 @@
+{
+  "name": "indicpipeline-livekit-token-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node local/server.js"
+  },
+  "dependencies": {
+    "livekit-server-sdk": "^2.14.0"
+  }
+}
+

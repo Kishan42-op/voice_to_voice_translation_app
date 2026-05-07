@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      Token server runs on your PC as plain HTTP (no TLS), so we allow cleartext.
+      This is for development; for production, you should use HTTPS.
+    -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+

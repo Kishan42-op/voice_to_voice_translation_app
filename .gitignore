@@ -1,0 +1,28 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Token server secrets
+token-server/.env
+
+# ML models (do NOT upload)
+app/src/main/assets/trans/
+app/src/main/assets/tts/
+
+# ASR models (do NOT upload)
+app/src/main/assets/asr/
+
+# Sample audio dataset (do NOT upload)
+app/src/main/assets/test_data/
