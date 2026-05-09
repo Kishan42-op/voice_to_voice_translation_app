@@ -1,126 +1,342 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center_horizontal">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Real-Time Indic Translator"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"/>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginBottom="16dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="My Language"
-            android:textStyle="bold" />
-
-        <Spinner
-            android:id="@+id/myLanguageSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:background="@android:drawable/btn_dropdown" />
-    </LinearLayout>
-
-    <androidx.appcompat.widget.SwitchCompat
-        android:id="@+id/switchInternetCall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Internet Call Mode (LiveKit)"
-        android:layout_marginBottom="8dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
-
-        <EditText
-            android:id="@+id/etRoomId"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Room ID"
-            android:inputType="text"
-            android:minHeight="48dp"
-            android:layout_marginEnd="8dp" />
-
-        <EditText
-            android:id="@+id/etUserId"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Your User ID"
-            android:inputType="text"
-            android:minHeight="48dp"
-            android:layout_marginStart="8dp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/layoutLoading"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:visibility="gone"
-        android:layout_marginBottom="16dp">
-        <ProgressBar android:layout_width="24dp" android:layout_height="24dp" android:layout_marginEnd="8dp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Loading Models..." />
-    </LinearLayout>
-
-    <TextView android:id="@+id/tvSystemStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Status: Please wait..." android:gravity="center" android:textStyle="italic" android:layout_marginBottom="16dp"/>
-
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
-        <Button android:id="@+id/btnCall" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Start Call" android:backgroundTint="#4CAF50" android:textColor="#FFF" android:layout_marginEnd="4dp"/>
-        <Button android:id="@+id/btnEnd" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="End Call" android:backgroundTint="#F44336" android:textColor="#FFF" android:layout_marginStart="4dp"/>
-    </LinearLayout>
-
-    <Button android:id="@+id/btnBenchmark" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Run Full Dataset Benchmark" android:backgroundTint="#FF9800" android:textColor="#FFF" android:layout_marginBottom="8dp"/>
-
-    <LinearLayout
-        android:id="@+id/layoutBenchmarkProgress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone"
-        android:layout_marginBottom="16dp">
-        <TextView android:id="@+id/tvBenchmarkStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Scanning dataset..." android:gravity="center" android:layout_marginBottom="4dp"/>
-        <ProgressBar android:id="@+id/pbBenchmark" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100"/>
-    </LinearLayout>
-
-    <TextView android:id="@+id/tvAsrOutput" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Heard: (waiting for voice...)" android:textSize="18sp" android:layout_marginBottom="8dp"/>
-    <TextView android:id="@+id/tvTransOutput" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Translated: (waiting for translation...)" android:textSize="18sp" android:textStyle="bold" android:textColor="#2196F3" android:layout_marginBottom="16dp"/>
+    android:fillViewport="true"
+    android:background="@color/app_background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="#EEEEEE"
-        android:layout_marginTop="16dp">
+        android:gravity="center_horizontal">
 
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Performance Metrics:" android:textStyle="bold" android:layout_marginBottom="8dp" />
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/title_main"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/app_on_surface"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp" />
 
-        <TextView android:id="@+id/tvAsrTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ASR Time: -- ms" />
-        <TextView android:id="@+id/tvTransTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Translation Time: -- ms" />
-        <TextView android:id="@+id/tvTtsTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="TTS Processing Time: -- ms" />
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/app_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/app_outline"
+            app:strokeWidth="1dp">
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#BDBDBD" android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <TextView android:id="@+id/tvTotalTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Total AI Processing: -- ms" android:textStyle="bold" android:textColor="#D32F2F" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_my_language"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginBottom="8dp" />
+
+                <Spinner
+                    android:id="@+id/myLanguageSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:background="@android:drawable/btn_dropdown" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/app_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/app_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switchInternetCall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_internet_call"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        app:boxBackgroundMode="outline"
+                        app:hintEnabled="true"
+                        android:hint="@string/hint_room_id">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etRoomId"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:minHeight="48dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        app:boxBackgroundMode="outline"
+                        app:hintEnabled="true"
+                        android:hint="@string/hint_user_id">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etUserId"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:minHeight="48dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:id="@+id/layoutLoading"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_marginBottom="12dp">
+            <ProgressBar
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="8dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/loading_models"
+                android:textColor="@color/app_on_surface" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/app_secondary_container"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <TextView
+                android:id="@+id/tvSystemStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/status_waiting"
+                android:gravity="center"
+                android:textStyle="italic"
+                android:textColor="@color/app_on_secondary_container"
+                android:padding="12dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:layout_marginBottom="12dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCall"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                    android:text="@string/btn_start_call"
+                    android:textColor="@color/app_on_primary"
+                android:layout_marginEnd="6dp"
+                    app:backgroundTint="@color/app_primary"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEnd"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                    android:text="@string/btn_end_call"
+                    android:textColor="@color/app_on_error"
+                android:layout_marginStart="6dp"
+                    app:backgroundTint="@color/app_error"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBenchmark"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_benchmark"
+            android:textColor="@color/app_on_primary"
+            app:backgroundTint="@color/status_warning"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/layoutBenchmarkProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tvBenchmarkStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/benchmark_scanning"
+                android:gravity="center"
+                android:textColor="@color/app_on_surface"
+                android:layout_marginBottom="6dp" />
+
+            <ProgressBar
+                android:id="@+id/pbBenchmark"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/app_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/app_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/section_recognized_speech"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_on_surface_variant"
+                    android:layout_marginBottom="6dp" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvAsrOutput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_asr_output"
+                    android:textSize="17sp"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginBottom="10dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/section_translation"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_on_surface_variant"
+                    android:layout_marginBottom="6dp" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvTransOutput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_translation_output"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/app_surface_variant"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/section_metrics"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/tvAsrTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/metric_asr_time"
+                    android:textColor="@color/app_on_surface" />
+
+                <TextView
+                    android:id="@+id/tvTransTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/metric_translation_time"
+                    android:textColor="@color/app_on_surface" />
+
+                <TextView
+                    android:id="@+id/tvTtsTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/metric_tts_time"
+                    android:textColor="@color/app_on_surface" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/app_outline"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/tvTotalTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/metric_total_time"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

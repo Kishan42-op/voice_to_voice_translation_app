@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">IndicPipeline</string>
+
+    <string name="title_main">Real-Time Indic Translator</string>
+    <string name="label_my_language">My Language</string>
+    <string name="label_internet_call">Internet Call Mode (LiveKit)</string>
+    <string name="hint_room_id">Room ID</string>
+    <string name="hint_user_id">Your User ID</string>
+    <string name="loading_models">Loading Models…</string>
+    <string name="status_waiting">Status: Please wait…</string>
+    <string name="btn_start_call">Start Call</string>
+    <string name="btn_end_call">End Call</string>
+    <string name="btn_benchmark">Run Full Dataset Benchmark</string>
+    <string name="benchmark_scanning">Scanning dataset…</string>
+    <string name="section_recognized_speech">Recognized Speech</string>
+    <string name="hint_asr_output">Heard: (waiting for voice…)</string>
+    <string name="section_translation">Translation</string>
+    <string name="hint_translation_output">Translated: (waiting for translation…)</string>
+    <string name="section_metrics">Performance Metrics</string>
+    <string name="metric_asr_time">ASR Time: — ms</string>
+    <string name="metric_translation_time">Translation Time: — ms</string>
+    <string name="metric_tts_time">TTS Processing Time: — ms</string>
+    <string name="metric_total_time">Total AI Processing: — ms</string>
 </resources>

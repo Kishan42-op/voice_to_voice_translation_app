@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 dark scheme -->
+    <color name="md_theme_dark_primary">#79DA9D</color>
+    <color name="md_theme_dark_onPrimary">#00391E</color>
+    <color name="md_theme_dark_primaryContainer">#00522E</color>
+    <color name="md_theme_dark_onPrimaryContainer">#95F7B8</color>
+
+    <color name="md_theme_dark_secondary">#B5CCBA</color>
+    <color name="md_theme_dark_onSecondary">#213528</color>
+    <color name="md_theme_dark_secondaryContainer">#374B3E</color>
+    <color name="md_theme_dark_onSecondaryContainer">#D1E8D5</color>
+
+    <color name="md_theme_dark_tertiary">#A2CDDC</color>
+    <color name="md_theme_dark_onTertiary">#033542</color>
+    <color name="md_theme_dark_tertiaryContainer">#214C59</color>
+    <color name="md_theme_dark_onTertiaryContainer">#BEEAF9</color>
+
+    <color name="md_theme_dark_error">#FFB4AB</color>
+    <color name="md_theme_dark_onError">#690005</color>
+    <color name="md_theme_dark_errorContainer">#93000A</color>
+    <color name="md_theme_dark_onErrorContainer">#FFDAD6</color>
+
+    <color name="md_theme_dark_background">#101510</color>
+    <color name="md_theme_dark_onBackground">#DDE4DC</color>
+    <color name="md_theme_dark_surface">#101510</color>
+    <color name="md_theme_dark_onSurface">#DDE4DC</color>
+    <color name="md_theme_dark_surfaceVariant">#404942</color>
+    <color name="md_theme_dark_onSurfaceVariant">#C0C9BF</color>
+    <color name="md_theme_dark_outline">#8A9389</color>
+
+    <!-- Safe semantic colors used by the layout -->
+    <color name="status_success">#81C784</color>
+    <color name="status_warning">#FFB74D</color>
+
+    <!-- Semantic UI aliases to avoid theme-attribute inflation crashes -->
+    <color name="app_background">#101510</color>
+    <color name="app_surface">#101510</color>
+    <color name="app_surface_variant">#404942</color>
+    <color name="app_on_background">#DDE4DC</color>
+    <color name="app_on_surface">#DDE4DC</color>
+    <color name="app_on_surface_variant">#C0C9BF</color>
+    <color name="app_outline">#8A9389</color>
+    <color name="app_secondary_container">#374B3E</color>
+    <color name="app_on_secondary_container">#D1E8D5</color>
+    <color name="app_primary">#79DA9D</color>
+    <color name="app_on_primary">#00391E</color>
+    <color name="app_error">#FFB4AB</color>
+    <color name="app_on_error">#690005</color>
+</resources>
