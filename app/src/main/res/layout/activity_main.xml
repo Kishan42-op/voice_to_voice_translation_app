@@ -52,7 +52,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:minHeight="48dp"
-                    android:background="@android:drawable/btn_dropdown" />
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="44dp"
+                    android:paddingBottom="8dp"
+                    android:background="@drawable/spinner_language_background"
+                    android:popupBackground="@drawable/spinner_language_popup_background"
+                    android:spinnerMode="dropdown" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
