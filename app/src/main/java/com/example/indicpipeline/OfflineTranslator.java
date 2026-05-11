@@ -1,6 +1,7 @@
 package com.example.indicpipeline;
 
 import android.content.Context;
+import android.util.Log;
 import ai.onnxruntime.*;
 import org.json.JSONObject;
 import java.io.*;
@@ -18,22 +19,41 @@ public class OfflineTranslator {
         env = sharedEnv; // USING SHARED ENV HERE
         tokenizer = new SentencePieceTokenizer();
 
-        // Models moved under assets/trans/
-        String tokenizerPath = assetToCache(context, "trans/tokenizer.model");
-        String encoderPath = assetToCache(context, "trans/encoder_quant.onnx");
-        String decoderPath = assetToCache(context, "trans/decoder_quant.onnx");
-        String lmPath = assetToCache(context, "trans/lm_head_quant.onnx");
+        try {
+            // Models moved under assets/trans/
+            Log.d("OfflineTranslator", "Loading translation models...");
+            String tokenizerPath = assetToCache(context, "trans/tokenizer.model");
+            String encoderPath = assetToCache(context, "trans/encoder_quant.onnx");
+            String decoderPath = assetToCache(context, "trans/decoder_quant.onnx");
+            String lmPath = assetToCache(context, "trans/lm_head_quant.onnx");
 
-        srcVocab = loadVocab(context, "trans/dict.SRC.json");
-        tgtVocab = loadReverseVocab(context, "trans/dict.TGT.json");
+            Log.d("OfflineTranslator", "Tokenizer: " + tokenizerPath);
+            Log.d("OfflineTranslator", "Encoder: " + encoderPath + " (size: " + new File(encoderPath).length() + ")");
+            Log.d("OfflineTranslator", "Decoder: " + decoderPath + " (size: " + new File(decoderPath).length() + ")");
+            Log.d("OfflineTranslator", "LM Head: " + lmPath + " (size: " + new File(lmPath).length() + ")");
 
-        tokenizer.loadModel(tokenizerPath);
-        OrtSession.SessionOptions options = new OrtSession.SessionOptions();
-        options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT);
+            srcVocab = loadVocab(context, "trans/dict.SRC.json");
+            tgtVocab = loadReverseVocab(context, "trans/dict.TGT.json");
 
-        encoderSession = env.createSession(encoderPath, options);
-        decoderSession = env.createSession(decoderPath, options);
-        lmHeadSession = env.createSession(lmPath, options);
+            tokenizer.loadModel(tokenizerPath);
+            OrtSession.SessionOptions options = new OrtSession.SessionOptions();
+            options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT);
+
+            Log.d("OfflineTranslator", "Creating encoder session...");
+            encoderSession = env.createSession(encoderPath, options);
+            Log.d("OfflineTranslator", "Encoder session created successfully");
+
+            Log.d("OfflineTranslator", "Creating decoder session...");
+            decoderSession = env.createSession(decoderPath, options);
+            Log.d("OfflineTranslator", "Decoder session created successfully");
+
+            Log.d("OfflineTranslator", "Creating LM head session...");
+            lmHeadSession = env.createSession(lmPath, options);
+            Log.d("OfflineTranslator", "LM head session created successfully");
+        } catch (Exception e) {
+            Log.e("OfflineTranslator", "Error initializing translation models", e);
+            throw new Exception("Failed to initialize OfflineTranslator: " + e.getMessage(), e);
+        }
     }
 
     private Map<String, Long> loadVocab(Context context, String fileName) throws Exception {
@@ -67,15 +87,61 @@ public class OfflineTranslator {
     private String assetToCache(Context context, String assetPath) throws IOException {
         // Keep cache filename stable even when assets are under subfolders.
         String cacheName = assetPath.replace("/", "_");
-        File file = new File(context.getCacheDir(), cacheName);
-        if (!file.exists()) {
-            try (InputStream is = context.getAssets().open(assetPath);
-                 FileOutputStream os = new FileOutputStream(file)) {
-                byte[] buffer = new byte[8192];
-                int read;
-                while ((read = is.read(buffer)) != -1) os.write(buffer, 0, read);
-            }
+        // Use internal files directory instead of cache to avoid system clearing
+        File filesDir = context.getFilesDir();
+        File parentDir = new File(filesDir, "models");
+        if (!parentDir.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            parentDir.mkdirs();
         }
+        File file = new File(parentDir, cacheName);
+
+        // Check if file exists and has valid size
+        if (file.exists() && file.length() > 0) {
+            return file.getAbsolutePath();
+        }
+
+        // Copy asset to file with proper error handling
+        try (InputStream is = context.getAssets().open(assetPath)) {
+            long assetSize = is.available();
+            if (assetSize == 0) {
+                throw new IOException("Asset file is empty: " + assetPath);
+            }
+
+            File tempFile = new File(parentDir, cacheName + ".tmp");
+            try (FileOutputStream os = new FileOutputStream(tempFile)) {
+                byte[] buffer = new byte[65536]; // Use larger buffer for better performance
+                int read;
+                long totalWritten = 0;
+                while ((read = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, read);
+                    totalWritten += read;
+                }
+                os.flush(); // Ensure all data is written
+                os.getFD().sync(); // Force sync to disk
+            }
+
+            // Validate file size matches expected asset size
+            if (tempFile.length() != assetSize) {
+                //noinspection ResultOfMethodCallIgnored
+                tempFile.delete();
+                throw new IOException("File copy incomplete. Expected: " + assetSize + ", Got: " + tempFile.length());
+            }
+
+            // Atomic rename to final location
+            if (file.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                file.delete();
+            }
+            if (!tempFile.renameTo(file)) {
+                //noinspection ResultOfMethodCallIgnored
+                tempFile.delete();
+                throw new IOException("Failed to rename temp file to: " + file.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            throw new IOException("Failed to copy asset '" + assetPath + "' to cache: " + e.getMessage(), e);
+        }
+
         return file.getAbsolutePath();
     }
 
