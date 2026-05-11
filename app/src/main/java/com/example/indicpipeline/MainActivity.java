@@ -183,7 +183,8 @@ public class MainActivity extends AppCompatActivity {
         languages.add(new LangConfig("Punjabi", "pa", "pan_Guru", "pan"));
         languages.add(new LangConfig("Assamese", "as", "asm_Beng", "asm"));
 
-        ArrayAdapter<LangConfig> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, languages);
+        ArrayAdapter<LangConfig> adapter = new ArrayAdapter<>(this, R.layout.spinner_language_item, languages);
+        adapter.setDropDownViewResource(R.layout.spinner_language_dropdown_item);
         myLanguageSpinner.setAdapter(adapter);
         myLanguageSpinner.setSelection(0);
     }
