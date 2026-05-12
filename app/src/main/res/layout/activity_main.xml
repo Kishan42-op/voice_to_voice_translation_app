@@ -208,6 +208,16 @@
             app:cornerRadius="12dp"
             android:layout_marginBottom="8dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="@string/logout"
+            android:textColor="@color/app_on_error"
+            app:backgroundTint="@color/app_error"
+            app:cornerRadius="12dp" />
+
         <LinearLayout
             android:id="@+id/layoutBenchmarkProgress"
             android:layout_width="match_parent"

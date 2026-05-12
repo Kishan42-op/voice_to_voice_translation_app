@@ -1,6 +1,7 @@
 package com.example.indicpipeline;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
@@ -16,10 +17,12 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -27,6 +30,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import ai.onnxruntime.OrtEnvironment;
+
+import com.example.indicpipeline.auth.viewmodel.AuthViewModel;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,10 +42,12 @@ public class MainActivity extends AppCompatActivity {
     private OrtEnvironment sharedEnv;
 
     private Spinner myLanguageSpinner;
-    private Button btnCall, btnEnd, btnBenchmark;
+    private Button btnCall, btnEnd, btnBenchmark, btnLogout;
     private TextView tvSystemStatus, tvAsrOutput, tvTransOutput;
     private SwitchCompat switchInternetCall;
     private EditText etRoomId, etUserId;
+    private AuthViewModel authViewModel;
+    private ActivityResultLauncher<String> microphonePermissionLauncher;
 
     // Hardcoded config so users only enter Room + User ID
     private static final String LIVEKIT_URL = "wss://indicpipelineapp-0vui3jrn.livekit.cloud";
@@ -90,10 +97,38 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        authViewModel = new ViewModelProvider(this).get(AuthViewModel.class);
+        authViewModel.getLogoutState().observe(this, state -> {
+            if (state == null) {
+                return;
+            }
+            if (state.getStatus() == com.example.indicpipeline.core.Resource.Status.ERROR) {
+                Toast.makeText(this, state.getMessage(), Toast.LENGTH_LONG).show();
+                authViewModel.clearLogoutState();
+                return;
+            }
+            if (state.getStatus() == com.example.indicpipeline.core.Resource.Status.SUCCESS) {
+                authViewModel.clearLogoutState();
+                navigateToAuth();
+            }
+        });
+
+        microphonePermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    if (granted) {
+                        startCallInternal();
+                    } else {
+                        tvSystemStatus.setText("Status: Mic Permission Denied!");
+                    }
+                }
+        );
+
         myLanguageSpinner = findViewById(R.id.myLanguageSpinner);
         btnCall = findViewById(R.id.btnCall);
         btnEnd = findViewById(R.id.btnEnd);
         btnBenchmark = findViewById(R.id.btnBenchmark);
+        btnLogout = findViewById(R.id.btnLogout);
         tvSystemStatus = findViewById(R.id.tvSystemStatus);
         tvAsrOutput = findViewById(R.id.tvAsrOutput);
         tvTransOutput = findViewById(R.id.tvTransOutput);
@@ -164,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnCall.setOnClickListener(v -> startCall());
         btnEnd.setOnClickListener(v -> endCall());
+        btnLogout.setOnClickListener(v -> performLogout());
 
         // NEW: Benchmark Button Click
         btnBenchmark.setOnClickListener(v -> startBenchmark());
@@ -243,9 +279,14 @@ public class MainActivity extends AppCompatActivity {
     // --- NORMAL MICROPHONE CALL LOGIC ---
     private void startCall() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1001);
+            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
             return;
         }
+
+        startCallInternal();
+    }
+
+    private void startCallInternal() {
 
         if (switchInternetCall != null && switchInternetCall.isChecked()) {
             startInternetCall();
@@ -618,6 +659,20 @@ public class MainActivity extends AppCompatActivity {
         tvSystemStatus.setText("Call Ended.");
     }
 
+    private void performLogout() {
+        if (inCall) {
+            endCall();
+        }
+        authViewModel.logout();
+    }
+
+    private void navigateToAuth() {
+        Intent intent = new Intent(this, com.example.indicpipeline.auth.ui.AuthActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
     // --- NEW: BENCHMARK AUTOMATION LOGIC ---
     private void startBenchmark() {
         btnCall.setEnabled(false);
@@ -727,15 +782,4 @@ public class MainActivity extends AppCompatActivity {
         return a.equalsIgnoreCase(b);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1001) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startCall();
-            } else {
-                tvSystemStatus.setText("Status: Mic Permission Denied!");
-            }
-        }
-    }
 }
