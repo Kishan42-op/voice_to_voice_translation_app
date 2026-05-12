@@ -1,6 +1,23 @@
 <resources>
     <string name="app_name">IndicPipeline</string>
 
+    <string name="splash_subtitle">Secure sign-in and session check</string>
+    <string name="title_login">Welcome back</string>
+    <string name="subtitle_login">Sign in with your email and password</string>
+    <string name="title_signup">Create account</string>
+    <string name="subtitle_signup">Sign up to start calling and syncing your profile</string>
+    <string name="hint_name">Name</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_confirm_password">Confirm password</string>
+    <string name="btn_login">Login</string>
+    <string name="btn_signup">Sign up</string>
+    <string name="link_go_to_signup">Don’t have an account? Sign up</string>
+    <string name="link_go_to_login">Already have an account? Login</string>
+    <string name="logout">Logout</string>
+    <string name="auth_loading">Checking session…</string>
+    <string name="auth_error">Authentication error</string>
+
     <string name="title_main">Real-Time Indic Translator</string>
     <string name="label_my_language">My Language</string>
     <string name="label_internet_call">Internet Call Mode (LiveKit)</string>
@@ -10,8 +27,6 @@
     <string name="status_waiting">Status: Please wait…</string>
     <string name="btn_start_call">Start Call</string>
     <string name="btn_end_call">End Call</string>
-    <string name="btn_benchmark">Run Full Dataset Benchmark</string>
-    <string name="benchmark_scanning">Scanning dataset…</string>
     <string name="section_recognized_speech">Recognized Speech</string>
     <string name="hint_asr_output">Heard: (waiting for voice…)</string>
     <string name="section_translation">Translation</string>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "888429409571",
+    "project_id": "indicpipeline",
+    "storage_bucket": "indicpipeline.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:888429409571:android:ff0f27fe743c5721a70896",
+        "android_client_info": {
+          "package_name": "com.example.indicpipeline"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDM8AgubHj1dghJZ-p2o1ibFYy3QjEJ3h4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,7 @@
 package com.example.indicpipeline;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
@@ -16,10 +17,12 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -27,6 +30,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import ai.onnxruntime.OrtEnvironment;
+
+import com.example.indicpipeline.auth.viewmodel.AuthViewModel;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,20 +42,17 @@ public class MainActivity extends AppCompatActivity {
     private OrtEnvironment sharedEnv;
 
     private Spinner myLanguageSpinner;
-    private Button btnCall, btnEnd, btnBenchmark;
+    private Button btnCall, btnEnd, btnLogout;
     private TextView tvSystemStatus, tvAsrOutput, tvTransOutput;
     private SwitchCompat switchInternetCall;
     private EditText etRoomId, etUserId;
+    private AuthViewModel authViewModel;
+    private ActivityResultLauncher<String> microphonePermissionLauncher;
 
     // Hardcoded config so users only enter Room + User ID
     private static final String LIVEKIT_URL = "wss://indicpipelineapp-0vui3jrn.livekit.cloud";
     // Vercel serverless base. The app appends "/token".
     private static final String TOKEN_SERVER_BASE_URL = "https://call-server-x3ug.vercel.app/api";
-
-    // Benchmark Progress UI
-    private LinearLayout layoutBenchmarkProgress;
-    private TextView tvBenchmarkStatus;
-    private ProgressBar pbBenchmark;
 
     // Timing TextViews
     private TextView tvAsrTime, tvTransTime, tvTtsTime, tvTotalTime;
@@ -90,10 +92,37 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        authViewModel = new ViewModelProvider(this).get(AuthViewModel.class);
+        authViewModel.getLogoutState().observe(this, state -> {
+            if (state == null) {
+                return;
+            }
+            if (state.getStatus() == com.example.indicpipeline.core.Resource.Status.ERROR) {
+                Toast.makeText(this, state.getMessage(), Toast.LENGTH_LONG).show();
+                authViewModel.clearLogoutState();
+                return;
+            }
+            if (state.getStatus() == com.example.indicpipeline.core.Resource.Status.SUCCESS) {
+                authViewModel.clearLogoutState();
+                navigateToAuth();
+            }
+        });
+
+        microphonePermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    if (granted) {
+                        startCallInternal();
+                    } else {
+                        tvSystemStatus.setText("Status: Mic Permission Denied!");
+                    }
+                }
+        );
+
         myLanguageSpinner = findViewById(R.id.myLanguageSpinner);
         btnCall = findViewById(R.id.btnCall);
         btnEnd = findViewById(R.id.btnEnd);
-        btnBenchmark = findViewById(R.id.btnBenchmark);
+        btnLogout = findViewById(R.id.btnLogout);
         tvSystemStatus = findViewById(R.id.tvSystemStatus);
         tvAsrOutput = findViewById(R.id.tvAsrOutput);
         tvTransOutput = findViewById(R.id.tvTransOutput);
@@ -102,11 +131,6 @@ public class MainActivity extends AppCompatActivity {
         etRoomId = findViewById(R.id.etRoomId);
         etUserId = findViewById(R.id.etUserId);
 
-        // Setup Progress UI
-        layoutBenchmarkProgress = findViewById(R.id.layoutBenchmarkProgress);
-        tvBenchmarkStatus = findViewById(R.id.tvBenchmarkStatus);
-        pbBenchmark = findViewById(R.id.pbBenchmark);
-
         tvAsrTime = findViewById(R.id.tvAsrTime);
         tvTransTime = findViewById(R.id.tvTransTime);
         tvTtsTime = findViewById(R.id.tvTtsTime);
@@ -114,7 +138,6 @@ public class MainActivity extends AppCompatActivity {
 
         btnCall.setEnabled(false);
         btnEnd.setEnabled(false);
-        btnBenchmark.setEnabled(false);
 
         setupLanguages();
         recorder = new AudioRecorder(this);
@@ -162,12 +185,10 @@ public class MainActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        btnCall.setOnClickListener(v -> startCall());
-        btnEnd.setOnClickListener(v -> endCall());
-
-        // NEW: Benchmark Button Click
-        btnBenchmark.setOnClickListener(v -> startBenchmark());
-    }
+         btnCall.setOnClickListener(v -> startCall());
+         btnEnd.setOnClickListener(v -> endCall());
+         btnLogout.setOnClickListener(v -> performLogout());
+     }
 
     private void setupLanguages() {
         languages = new ArrayList<>();
@@ -212,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
                     layoutLoading.setVisibility(View.GONE);
                     tvSystemStatus.setText("Ready! (Loaded in " + (t1 - t0) / 1000 + "s)");
                     btnCall.setEnabled(true);
-                    btnBenchmark.setEnabled(true); // Enable Benchmark Button
+                    btnEnd.setEnabled(false);
                     isInitialBoot = false;
                 });
             } catch (Exception e) {
@@ -243,9 +264,14 @@ public class MainActivity extends AppCompatActivity {
     // --- NORMAL MICROPHONE CALL LOGIC ---
     private void startCall() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1001);
+            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
             return;
         }
+
+        startCallInternal();
+    }
+
+    private void startCallInternal() {
 
         if (switchInternetCall != null && switchInternetCall.isChecked()) {
             startInternetCall();
@@ -256,7 +282,6 @@ public class MainActivity extends AppCompatActivity {
         isSpeaking = false;
         btnCall.setEnabled(false);
         btnEnd.setEnabled(true);
-        btnBenchmark.setEnabled(false); // Disable benchmark during a live call
         audioQueue.clear();
         accumulatedAudio = new short[0];
 
@@ -416,7 +441,6 @@ public class MainActivity extends AppCompatActivity {
         applyInCallAudioRoute(false);
         btnCall.setEnabled(false);
         btnEnd.setEnabled(true);
-        btnBenchmark.setEnabled(false);
         audioQueue.clear();
         accumulatedAudio = new short[0];
 
@@ -456,7 +480,6 @@ public class MainActivity extends AppCompatActivity {
                     tvSystemStatus.setText("Token fetch failed: " + msg);
                     btnCall.setEnabled(true);
                     btnEnd.setEnabled(false);
-                    btnBenchmark.setEnabled(true);
                 });
                 inCall = false;
             }
@@ -614,56 +637,24 @@ public class MainActivity extends AppCompatActivity {
         resetAudioRoute();
         btnCall.setEnabled(true);
         btnEnd.setEnabled(false);
-        btnBenchmark.setEnabled(true);
         tvSystemStatus.setText("Call Ended.");
     }
 
-    // --- NEW: BENCHMARK AUTOMATION LOGIC ---
-    private void startBenchmark() {
-        btnCall.setEnabled(false);
-        btnEnd.setEnabled(false);
-        btnBenchmark.setEnabled(false);
-
-        layoutBenchmarkProgress.setVisibility(View.VISIBLE);
-        pbBenchmark.setProgress(0);
-        tvBenchmarkStatus.setText("Scanning dataset folders...");
-
-        BatchEvaluator.runBatchBenchmark(this, asrEngine, translator, languages, new BatchEvaluator.BenchmarkCallback() {
-            @Override
-            public void onProgress(int currentFile, int totalFiles, String statusText) {
-                runOnUiThread(() -> {
-                    pbBenchmark.setMax(totalFiles);
-                    pbBenchmark.setProgress(currentFile);
-                    tvBenchmarkStatus.setText(statusText + "\n(" + currentFile + " of " + totalFiles + ")");
-                });
-            }
-
-            @Override
-            public void onComplete(String finalMessage) {
-                runOnUiThread(() -> {
-                    tvBenchmarkStatus.setText(finalMessage);
-                    Toast.makeText(MainActivity.this, finalMessage, Toast.LENGTH_LONG).show();
-
-                    // Re-enable buttons when finished
-                    btnCall.setEnabled(true);
-                    btnBenchmark.setEnabled(true);
-                });
-            }
-
-            @Override
-            public void onError(String errorMsg) {
-                runOnUiThread(() -> {
-                    tvBenchmarkStatus.setText("Error: " + errorMsg);
-                    Toast.makeText(MainActivity.this, "Benchmark Error!", Toast.LENGTH_SHORT).show();
-
-                    btnCall.setEnabled(true);
-                    btnBenchmark.setEnabled(true);
-                });
-            }
-        });
+    private void performLogout() {
+        if (inCall) {
+            endCall();
+        }
+        authViewModel.logout();
     }
 
-    // --- UTILS ---
+    private void navigateToAuth() {
+        Intent intent = new Intent(this, com.example.indicpipeline.auth.ui.AuthActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+         startActivity(intent);
+         finish();
+     }
+
+     // --- UTILS ---
     private double calculateRMS(short[] chunk) {
         if (chunk.length == 0) return 0;
         double sum = 0;
@@ -727,15 +718,4 @@ public class MainActivity extends AppCompatActivity {
         return a.equalsIgnoreCase(b);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1001) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startCall();
-            } else {
-                tvSystemStatus.setText("Status: Mic Permission Denied!");
-            }
-        }
-    }
 }
