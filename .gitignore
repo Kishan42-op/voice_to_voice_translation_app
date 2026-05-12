@@ -21,3 +21,7 @@ app/src/main/assets/asr/
 
 # Sample audio dataset (do NOT upload)
 app/src/main/assets/test_data/
+
+# Firebase Android config (keep local, do not commit)
+app/google-services.json
+
