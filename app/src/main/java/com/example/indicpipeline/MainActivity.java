@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private OrtEnvironment sharedEnv;
 
     private Spinner myLanguageSpinner;
-    private Button btnCall, btnEnd, btnBenchmark, btnLogout;
+    private Button btnCall, btnEnd, btnLogout;
     private TextView tvSystemStatus, tvAsrOutput, tvTransOutput;
     private SwitchCompat switchInternetCall;
     private EditText etRoomId, etUserId;
@@ -53,11 +53,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String LIVEKIT_URL = "wss://indicpipelineapp-0vui3jrn.livekit.cloud";
     // Vercel serverless base. The app appends "/token".
     private static final String TOKEN_SERVER_BASE_URL = "https://call-server-x3ug.vercel.app/api";
-
-    // Benchmark Progress UI
-    private LinearLayout layoutBenchmarkProgress;
-    private TextView tvBenchmarkStatus;
-    private ProgressBar pbBenchmark;
 
     // Timing TextViews
     private TextView tvAsrTime, tvTransTime, tvTtsTime, tvTotalTime;
@@ -127,7 +122,6 @@ public class MainActivity extends AppCompatActivity {
         myLanguageSpinner = findViewById(R.id.myLanguageSpinner);
         btnCall = findViewById(R.id.btnCall);
         btnEnd = findViewById(R.id.btnEnd);
-        btnBenchmark = findViewById(R.id.btnBenchmark);
         btnLogout = findViewById(R.id.btnLogout);
         tvSystemStatus = findViewById(R.id.tvSystemStatus);
         tvAsrOutput = findViewById(R.id.tvAsrOutput);
@@ -137,11 +131,6 @@ public class MainActivity extends AppCompatActivity {
         etRoomId = findViewById(R.id.etRoomId);
         etUserId = findViewById(R.id.etUserId);
 
-        // Setup Progress UI
-        layoutBenchmarkProgress = findViewById(R.id.layoutBenchmarkProgress);
-        tvBenchmarkStatus = findViewById(R.id.tvBenchmarkStatus);
-        pbBenchmark = findViewById(R.id.pbBenchmark);
-
         tvAsrTime = findViewById(R.id.tvAsrTime);
         tvTransTime = findViewById(R.id.tvTransTime);
         tvTtsTime = findViewById(R.id.tvTtsTime);
@@ -149,7 +138,6 @@ public class MainActivity extends AppCompatActivity {
 
         btnCall.setEnabled(false);
         btnEnd.setEnabled(false);
-        btnBenchmark.setEnabled(false);
 
         setupLanguages();
         recorder = new AudioRecorder(this);
@@ -197,13 +185,10 @@ public class MainActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        btnCall.setOnClickListener(v -> startCall());
-        btnEnd.setOnClickListener(v -> endCall());
-        btnLogout.setOnClickListener(v -> performLogout());
-
-        // NEW: Benchmark Button Click
-        btnBenchmark.setOnClickListener(v -> startBenchmark());
-    }
+         btnCall.setOnClickListener(v -> startCall());
+         btnEnd.setOnClickListener(v -> endCall());
+         btnLogout.setOnClickListener(v -> performLogout());
+     }
 
     private void setupLanguages() {
         languages = new ArrayList<>();
@@ -248,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
                     layoutLoading.setVisibility(View.GONE);
                     tvSystemStatus.setText("Ready! (Loaded in " + (t1 - t0) / 1000 + "s)");
                     btnCall.setEnabled(true);
-                    btnBenchmark.setEnabled(true); // Enable Benchmark Button
+                    btnEnd.setEnabled(false);
                     isInitialBoot = false;
                 });
             } catch (Exception e) {
@@ -297,7 +282,6 @@ public class MainActivity extends AppCompatActivity {
         isSpeaking = false;
         btnCall.setEnabled(false);
         btnEnd.setEnabled(true);
-        btnBenchmark.setEnabled(false); // Disable benchmark during a live call
         audioQueue.clear();
         accumulatedAudio = new short[0];
 
@@ -457,7 +441,6 @@ public class MainActivity extends AppCompatActivity {
         applyInCallAudioRoute(false);
         btnCall.setEnabled(false);
         btnEnd.setEnabled(true);
-        btnBenchmark.setEnabled(false);
         audioQueue.clear();
         accumulatedAudio = new short[0];
 
@@ -497,7 +480,6 @@ public class MainActivity extends AppCompatActivity {
                     tvSystemStatus.setText("Token fetch failed: " + msg);
                     btnCall.setEnabled(true);
                     btnEnd.setEnabled(false);
-                    btnBenchmark.setEnabled(true);
                 });
                 inCall = false;
             }
@@ -655,7 +637,6 @@ public class MainActivity extends AppCompatActivity {
         resetAudioRoute();
         btnCall.setEnabled(true);
         btnEnd.setEnabled(false);
-        btnBenchmark.setEnabled(true);
         tvSystemStatus.setText("Call Ended.");
     }
 
@@ -669,56 +650,11 @@ public class MainActivity extends AppCompatActivity {
     private void navigateToAuth() {
         Intent intent = new Intent(this, com.example.indicpipeline.auth.ui.AuthActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
+         startActivity(intent);
+         finish();
+     }
 
-    // --- NEW: BENCHMARK AUTOMATION LOGIC ---
-    private void startBenchmark() {
-        btnCall.setEnabled(false);
-        btnEnd.setEnabled(false);
-        btnBenchmark.setEnabled(false);
-
-        layoutBenchmarkProgress.setVisibility(View.VISIBLE);
-        pbBenchmark.setProgress(0);
-        tvBenchmarkStatus.setText("Scanning dataset folders...");
-
-        BatchEvaluator.runBatchBenchmark(this, asrEngine, translator, languages, new BatchEvaluator.BenchmarkCallback() {
-            @Override
-            public void onProgress(int currentFile, int totalFiles, String statusText) {
-                runOnUiThread(() -> {
-                    pbBenchmark.setMax(totalFiles);
-                    pbBenchmark.setProgress(currentFile);
-                    tvBenchmarkStatus.setText(statusText + "\n(" + currentFile + " of " + totalFiles + ")");
-                });
-            }
-
-            @Override
-            public void onComplete(String finalMessage) {
-                runOnUiThread(() -> {
-                    tvBenchmarkStatus.setText(finalMessage);
-                    Toast.makeText(MainActivity.this, finalMessage, Toast.LENGTH_LONG).show();
-
-                    // Re-enable buttons when finished
-                    btnCall.setEnabled(true);
-                    btnBenchmark.setEnabled(true);
-                });
-            }
-
-            @Override
-            public void onError(String errorMsg) {
-                runOnUiThread(() -> {
-                    tvBenchmarkStatus.setText("Error: " + errorMsg);
-                    Toast.makeText(MainActivity.this, "Benchmark Error!", Toast.LENGTH_SHORT).show();
-
-                    btnCall.setEnabled(true);
-                    btnBenchmark.setEnabled(true);
-                });
-            }
-        });
-    }
-
-    // --- UTILS ---
+     // --- UTILS ---
     private double calculateRMS(short[] chunk) {
         if (chunk.length == 0) return 0;
         double sum = 0;

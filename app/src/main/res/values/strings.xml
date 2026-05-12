@@ -27,8 +27,6 @@
     <string name="status_waiting">Status: Please wait…</string>
     <string name="btn_start_call">Start Call</string>
     <string name="btn_end_call">End Call</string>
-    <string name="btn_benchmark">Run Full Dataset Benchmark</string>
-    <string name="benchmark_scanning">Scanning dataset…</string>
     <string name="section_recognized_speech">Recognized Speech</string>
     <string name="hint_asr_output">Heard: (waiting for voice…)</string>
     <string name="section_translation">Translation</string>
