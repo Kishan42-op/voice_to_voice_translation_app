@@ -26,6 +26,8 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginEnd="12dp"
+            android:layout_gravity="center"
+            android:textAlignment="center"
             app:cardBackgroundColor="@color/app_primary_container"
             app:cardCornerRadius="24dp"
             app:cardElevation="0dp">
@@ -41,6 +43,7 @@
                     android:layout_height="wrap_content"
                     android:textSize="18sp"
                     android:textStyle="bold"
+                    android:layout_gravity="center"
                     android:textColor="@color/app_on_primary_container"
                     android:text="U" />
             </FrameLayout>
