@@ -1,12 +1,16 @@
 package com.example.indicpipeline.shell.ui;
 
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.example.indicpipeline.R;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -21,7 +25,14 @@ public class AppShellActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Allow content to be drawn behind system bars and hide the status bar for a full-screen look
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_app_shell);
+
+        // Hide only the status bar (keep navigation bar visible so bottom navigation works)
+        WindowInsetsControllerCompat insetsController = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        insetsController.hide(WindowInsetsCompat.Type.statusBars());
+        insetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
 
         bottomNavigation = findViewById(R.id.bottomNavigation);
 
@@ -83,4 +94,5 @@ public class AppShellActivity extends AppCompatActivity {
         });
     }
 }
+
 
