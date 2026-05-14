@@ -53,17 +53,14 @@ public class AuthViewModel extends ViewModel {
         authRepository.signUp(email, password, new AuthRepository.AuthResultCallback<FirebaseUser>() {
             @Override
             public void onSuccess(FirebaseUser result) {
-                userRepository.createUserDocument(result, name, new AuthRepository.AuthResultCallback<User>() {
-                    @Override
-                    public void onSuccess(User user) {
-                        authState.postValue(Resource.success(user));
-                    }
-
-                    @Override
-                    public void onError(String message) {
-                        authState.postValue(Resource.error(message));
-                    }
-                });
+                User pendingProfile = new User(
+                        result.getUid(),
+                        name,
+                        result.getEmail(),
+                        null,
+                        null
+                );
+                authState.postValue(Resource.success(pendingProfile));
             }
 
             @Override
@@ -88,6 +85,16 @@ public class AuthViewModel extends ViewModel {
         userRepository.getUserDocument(firebaseUser.getUid(), new AuthRepository.AuthResultCallback<User>() {
             @Override
             public void onSuccess(User user) {
+                if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+                    authState.postValue(Resource.success(new User(
+                            firebaseUser.getUid(),
+                            user.getName() != null ? user.getName() : firebaseUser.getDisplayName(),
+                            user.getEmail() != null ? user.getEmail() : firebaseUser.getEmail(),
+                            null,
+                            user.getCreatedAt()
+                    )));
+                    return;
+                }
                 authState.postValue(Resource.success(user));
             }
 
@@ -97,6 +104,7 @@ public class AuthViewModel extends ViewModel {
                         firebaseUser.getUid(),
                         firebaseUser.getDisplayName(),
                         firebaseUser.getEmail(),
+                        null,
                         null
                 );
                 authState.postValue(Resource.success(fallbackUser));

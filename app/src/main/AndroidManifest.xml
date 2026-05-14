@@ -31,6 +31,15 @@
             android:exported="false" />
 
         <activity
+            android:name=".profile.ui.UsernameSetupActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".shell.ui.AppShellActivity"
+            android:exported="false"
+            android:windowSoftInputMode="stateVisible|adjustResize" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="false" />
 

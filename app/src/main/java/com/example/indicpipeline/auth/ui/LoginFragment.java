@@ -13,11 +13,12 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
-import com.example.indicpipeline.MainActivity;
 import com.example.indicpipeline.R;
 import com.example.indicpipeline.auth.viewmodel.AuthViewModel;
 import com.example.indicpipeline.core.Resource;
 import com.example.indicpipeline.models.User;
+import com.example.indicpipeline.shell.ui.AppShellActivity;
+import com.example.indicpipeline.profile.ui.UsernameSetupActivity;
 import com.example.indicpipeline.utils.AuthValidator;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
@@ -87,7 +88,7 @@ public class LoginFragment extends Fragment {
                 setLoading(false);
                 User user = state.getData();
                 authViewModel.clearAuthState();
-                openHome();
+                routeNext(user);
             }
         });
     }
@@ -145,8 +146,20 @@ public class LoginFragment extends Fragment {
         errorText.setTextColor(requireContext().getColor(isError ? R.color.app_error : R.color.app_primary));
     }
 
-    private void openHome() {
-        Intent intent = new Intent(requireContext(), MainActivity.class);
+    private void routeNext(User user) {
+        if (user == null || user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            Intent intent = new Intent(requireContext(), UsernameSetupActivity.class);
+            if (user != null) {
+                intent.putExtra(UsernameSetupActivity.EXTRA_NAME, user.getName());
+                intent.putExtra(UsernameSetupActivity.EXTRA_EMAIL, user.getEmail());
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            requireActivity().finishAffinity();
+            return;
+        }
+
+        Intent intent = new Intent(requireContext(), AppShellActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         requireActivity().finishAffinity();

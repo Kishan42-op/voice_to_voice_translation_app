@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/app_background">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbarProfile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:title="@string/title_shell_profile"
+        app:titleTextColor="@color/app_on_surface"
+        app:backgroundTint="@color/app_background" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/progressProfile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="32dp"
+        android:visibility="gone"
+        app:indicatorColor="@color/app_primary" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/tvProfileError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="32dp"
+        android:gravity="center"
+        android:textColor="@color/app_error"
+        android:visibility="gone"
+        android:padding="16dp" />
+
+    <ScrollView
+        android:id="@+id/scrollProfile"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:gravity="center_horizontal">
+
+            <!-- Avatar Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/app_primary_container"
+                app:cardCornerRadius="60dp"
+                app:cardElevation="0dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvProfileInitials"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:textAlignment="center"
+                        android:textSize="42sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_on_primary_container"
+                        android:text="U" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Info Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/app_surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/app_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:gravity="center_horizontal">
+
+                    <!-- Name -->
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/shell_profile_name_label"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_on_surface_variant"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvProfileName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textAlignment="center"
+                        android:textColor="@color/app_on_surface"
+                        android:textSize="16sp"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Username -->
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/shell_profile_username_label"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_on_surface_variant"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvProfileUsername"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textAlignment="center"
+                        android:textColor="@color/app_primary"
+                        android:textSize="16sp"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Email -->
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/shell_profile_email_label"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_on_surface_variant"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvProfileEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textAlignment="center"
+                        android:textColor="@color/app_on_surface"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Placeholder Sections (Future) -->
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/shell_profile_edit_profile"
+                android:textStyle="bold"
+                android:textColor="@color/app_on_surface_variant"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="4dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/app_surface_variant"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:gravity="center">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textAlignment="center"
+                        android:text="Coming soon"
+                        android:textColor="@color/app_on_surface_variant"
+                        android:textSize="14sp" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Logout Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnProfileLogout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/shell_profile_logout"
+                android:textColor="@color/app_on_error"
+                app:backgroundTint="@color/app_error"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
+
+
+

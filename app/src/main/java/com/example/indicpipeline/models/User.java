@@ -11,15 +11,21 @@ public class User {
     private String uid;
     private String name;
     private String email;
+    private String username;
     private Timestamp createdAt;
 
     public User() {
     }
 
     public User(String uid, String name, String email, Timestamp createdAt) {
+        this(uid, name, email, null, createdAt);
+    }
+
+    public User(String uid, String name, String email, String username, Timestamp createdAt) {
         this.uid = uid;
         this.name = name;
         this.email = email;
+        this.username = username;
         this.createdAt = createdAt;
     }
 
@@ -45,6 +51,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public Timestamp getCreatedAt() {

@@ -9,6 +9,7 @@ public final class AuthValidator {
             "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9_]{3,20}$");
 
     private AuthValidator() {
     }
@@ -49,6 +50,18 @@ public final class AuthValidator {
         }
         if (!password.equals(confirmPassword)) {
             return "Passwords do not match.";
+        }
+        return null;
+    }
+
+    public static String validateUsername(String username) {
+        if (TextUtils.isEmpty(username == null ? null : username.trim())) {
+            return "Username is required.";
+        }
+
+        String normalized = username.trim().toLowerCase();
+        if (!USERNAME_PATTERN.matcher(normalized).matches()) {
+            return "Use 3-20 lowercase letters, numbers, or underscores.";
         }
         return null;
     }
