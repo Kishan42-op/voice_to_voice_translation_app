@@ -6,9 +6,9 @@
         android:title="@string/title_shell_home" />
 
     <item
-        android:id="@+id/nav_search"
-        android:icon="@drawable/ic_search"
-        android:title="@string/title_shell_search" />
+        android:id="@+id/nav_contacts"
+        android:icon="@drawable/ic_contacts"
+        android:title="@string/title_shell_contacts" />
 
     <item
         android:id="@+id/nav_notifications"

@@ -11,6 +11,7 @@
     <string name="title_home">Search users</string>
     <string name="title_shell_home">Home</string>
     <string name="title_shell_search">Search</string>
+    <string name="title_shell_contacts">Contacts</string>
     <string name="title_shell_notifications">Notifications</string>
     <string name="title_shell_profile">Profile</string>
     <string name="shell_home_title">Welcome back</string>
@@ -89,4 +90,20 @@
     <string name="metric_translation_time">Translation Time: — ms</string>
     <string name="metric_tts_time">TTS Processing Time: — ms</string>
     <string name="metric_total_time">Total AI Processing: — ms</string>
+
+    <!-- Phase 4: Contacts and Modern UI -->
+    <string name="contacts_title">Contacts</string>
+    <string name="contacts_search_hint">Search contacts</string>
+    <string name="contacts_empty_title">No contacts yet</string>
+    <string name="contacts_empty_subtitle">Find users and add them as friends to start calling.</string>
+    <string name="contacts_recent_title">Recent Friends</string>
+    <string name="contacts_all_title">All Friends</string>
+    <string name="contact_card_call">Call</string>
+    <string name="contact_card_message">Message</string>
+    <string name="friend_detail_title">Friend Profile</string>
+    <string name="friend_detail_call_button">Start Call</string>
+    <string name="friend_detail_message_button">Send Message</string>
+    <string name="friend_detail_info">Contact Information</string>
+    <string name="friend_detail_avatar_fallback">U</string>
+    <string name="friend_detail_coming_soon">Coming soon</string>
 </resources>
