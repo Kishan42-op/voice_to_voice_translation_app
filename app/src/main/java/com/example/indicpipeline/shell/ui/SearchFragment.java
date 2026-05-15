@@ -18,23 +18,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.indicpipeline.R;
 import com.example.indicpipeline.core.Resource;
-import com.example.indicpipeline.models.User;
+import com.example.indicpipeline.contacts.model.UserConnectionItem;
 import com.example.indicpipeline.shell.adapter.ShellUserAdapter;
-import com.example.indicpipeline.shell.viewmodel.SearchViewModel;
+import com.example.indicpipeline.shell.viewmodel.FriendRequestViewModel;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textview.MaterialTextView;
 
-import java.util.List;
+import java.util.Collections;
 
 public class SearchFragment extends Fragment {
-    private SearchViewModel searchViewModel;
+    private FriendRequestViewModel friendRequestViewModel;
     private ShellUserAdapter userAdapter;
     private TextInputEditText searchInput;
     private CircularProgressIndicator progressIndicator;
     private MaterialTextView emptyText;
     private MaterialTextView errorText;
-    private RecyclerView usersRecyclerView;
 
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
@@ -53,20 +52,31 @@ public class SearchFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
-        userAdapter = new ShellUserAdapter();
+        friendRequestViewModel = new ViewModelProvider(requireActivity()).get(FriendRequestViewModel.class);
+        friendRequestViewModel.setContext(requireContext());
+        userAdapter = new ShellUserAdapter(new ShellUserAdapter.OnUserActionListener() {
+            @Override
+            public void onSendRequest(String uid) {
+                friendRequestViewModel.sendFriendRequest(uid);
+            }
+
+            @Override
+            public void onAcceptRequest(String requestId) {
+                friendRequestViewModel.acceptFriendRequest(requestId);
+            }
+        });
 
         searchInput = view.findViewById(R.id.etSearchUsers);
         progressIndicator = view.findViewById(R.id.progressSearch);
         emptyText = view.findViewById(R.id.tvSearchEmpty);
         errorText = view.findViewById(R.id.tvSearchError);
-        usersRecyclerView = view.findViewById(R.id.recyclerSearchUsers);
+        RecyclerView usersRecyclerView = view.findViewById(R.id.recyclerSearchUsers);
 
         usersRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         usersRecyclerView.setAdapter(userAdapter);
         usersRecyclerView.setHasFixedSize(true);
 
-        searchRunnable = () -> searchViewModel.searchUsers(getText(searchInput));
+        searchRunnable = () -> friendRequestViewModel.searchUsers(getText(searchInput));
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -85,7 +95,7 @@ public class SearchFragment extends Fragment {
             }
         });
 
-        searchViewModel.getSearchState().observe(getViewLifecycleOwner(), state -> {
+        friendRequestViewModel.getSearchState().observe(getViewLifecycleOwner(), state -> {
             if (state == null) {
                 return;
             }
@@ -100,7 +110,7 @@ public class SearchFragment extends Fragment {
 
             if (state.getStatus() == Resource.Status.ERROR) {
                 setLoading(false);
-                userAdapter.submitList(null);
+                userAdapter.submitList(Collections.emptyList());
                 showError(state.getMessage());
                 showEmpty(false);
                 keepSearchFocused();
@@ -110,17 +120,31 @@ public class SearchFragment extends Fragment {
             if (state.getStatus() == Resource.Status.SUCCESS) {
                 setLoading(false);
                 showError(null);
-                List<User> users = state.getData();
-                userAdapter.submitList(users);
+                java.util.List<UserConnectionItem> users = state.getData();
+                userAdapter.submitList(users == null ? Collections.emptyList() : users);
                 boolean empty = users == null || users.isEmpty();
-                showEmpty(empty && searchInput.getText() != null && searchInput.getText().toString().trim().isEmpty());
+                String query = getText(searchInput).trim();
+                showEmpty(empty);
+                emptyText.setText(query.isEmpty() ? getString(R.string.shell_search_empty) : "No matching users found.");
                 keepSearchFocused();
+            }
+        });
+
+        friendRequestViewModel.getActionState().observe(getViewLifecycleOwner(), state -> {
+            if (state == null) {
+                return;
+            }
+            if (state.getStatus() == Resource.Status.ERROR) {
+                showError(state.getMessage());
+            }
+            if (state.getStatus() == Resource.Status.SUCCESS) {
+                showError(null);
             }
         });
 
         // Initial search
         if (savedInstanceState == null) {
-            searchViewModel.searchUsers("");
+            friendRequestViewModel.searchUsers("");
         }
     }
 

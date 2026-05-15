@@ -14,66 +14,75 @@
         app:titleTextColor="@color/app_on_surface"
         app:backgroundTint="@color/app_background" />
 
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/progressNotifications"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        app:indicatorColor="@color/app_primary" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/tvNotificationsError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:padding="12dp"
+        android:textColor="@color/app_error"
+        android:visibility="gone" />
+
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <LinearLayout
+            android:id="@+id/layoutNotificationsEmpty"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center"
-            android:padding="32dp">
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/ic_notifications"
+                android:tint="@color/app_primary"
+                android:contentDescription="@null" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/shell_notifications_title"
-                android:textSize="20sp"
-                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:text="@string/shell_notifications_empty_title"
                 android:textColor="@color/app_on_surface"
-                android:layout_marginBottom="8dp" />
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/shell_notifications_empty"
-                android:textColor="@color/app_on_surface_variant"
-                android:textSize="14sp"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:layout_marginBottom="24dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/shell_notifications_call_hint"
-                    android:textColor="@color/app_on_surface_variant"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="4dp" />
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/shell_notifications_request_hint"
-                    android:textColor="@color/app_on_surface_variant"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="4dp" />
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/shell_notifications_missed_hint"
-                    android:textColor="@color/app_on_surface_variant"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                android:text="@string/shell_notifications_empty_subtitle"
+                android:textColor="@color/app_on_surface_variant"
+                android:textSize="14sp" />
         </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerFriendRequests"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="16dp"
+            android:scrollbars="vertical" />
     </FrameLayout>
 
 </LinearLayout>
