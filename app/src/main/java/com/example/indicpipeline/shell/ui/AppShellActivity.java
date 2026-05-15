@@ -18,7 +18,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 public class AppShellActivity extends AppCompatActivity {
     private BottomNavigationView bottomNavigation;
     private HomeFragment homeFragment;
-    private SearchFragment searchFragment;
+    private ContactsFragment contactsFragment;
     private NotificationsFragment notificationsFragment;
     private ProfileFragment profileFragment;
 
@@ -43,9 +43,9 @@ public class AppShellActivity extends AppCompatActivity {
             homeFragment = new HomeFragment();
         }
 
-        searchFragment = (SearchFragment) fm.findFragmentByTag("search");
-        if (searchFragment == null) {
-            searchFragment = new SearchFragment();
+        contactsFragment = (ContactsFragment) fm.findFragmentByTag("contacts");
+        if (contactsFragment == null) {
+            contactsFragment = new ContactsFragment();
         }
 
         notificationsFragment = (NotificationsFragment) fm.findFragmentByTag("notifications");
@@ -72,9 +72,9 @@ public class AppShellActivity extends AppCompatActivity {
             if (item.getItemId() == R.id.nav_home) {
                 selectedFragment = homeFragment;
                 tag = "home";
-            } else if (item.getItemId() == R.id.nav_search) {
-                selectedFragment = searchFragment;
-                tag = "search";
+            } else if (item.getItemId() == R.id.nav_contacts) {
+                selectedFragment = contactsFragment;
+                tag = "contacts";
             } else if (item.getItemId() == R.id.nav_notifications) {
                 selectedFragment = notificationsFragment;
                 tag = "notifications";

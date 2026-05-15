@@ -25,7 +25,8 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        // Placeholder for future real calls and contacts
+        // Home dashboard showing communication overview
+        // Ready for recent calls and contacts in future phases
     }
 }
 
