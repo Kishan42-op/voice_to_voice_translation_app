@@ -25,6 +25,8 @@
     <string name="shell_notifications_title">Notifications</string>
     <string name="shell_notifications_subtitle">Requests, calls, and updates will show here.</string>
     <string name="shell_notifications_empty">No notifications yet.</string>
+    <string name="shell_notifications_empty_title">No friend requests yet</string>
+    <string name="shell_notifications_empty_subtitle">Incoming friend requests will appear here in real time.</string>
     <string name="shell_profile_title">Your profile</string>
     <string name="shell_profile_subtitle">Manage your identity and future settings.</string>
     <string name="shell_profile_edit_profile">Edit profile</string>
@@ -35,8 +37,15 @@
     <string name="shell_profile_loading">Loading profile…</string>
     <string name="shell_profile_error">Unable to load profile.</string>
     <string name="shell_profile_missing">Profile not found.</string>
-    <string name="shell_friend_request">Request</string>
+    <string name="shell_friend_request_send">Send Request</string>
+    <string name="shell_friend_request_sent">Request Sent</string>
+    <string name="shell_friend_request_friends">Friends</string>
+    <string name="shell_friend_request_accept">Accept Request</string>
+    <string name="shell_friend_request_reject">Reject</string>
     <string name="shell_friend_request_hint">Send Friend Request</string>
+    <string name="shell_friend_request_message">Sent you a friend request</string>
+    <string name="shell_search_no_results">No matching users found.</string>
+    <string name="shell_unknown_user">Unknown user</string>
     <string name="shell_recent_calls_hint">Recent calls will appear here.</string>
     <string name="shell_recent_contacts_hint">Recent contacts will appear here.</string>
     <string name="shell_notifications_call_hint">Incoming calls</string>
