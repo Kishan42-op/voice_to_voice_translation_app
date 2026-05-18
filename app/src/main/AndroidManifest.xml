@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:name=".App"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -45,7 +46,24 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.call.OutgoingCallActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.call.IncomingCallActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.DayNight.Dialog" />
+
+        <activity
+            android:name=".ui.call.CallActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".MainActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".settings.SettingsActivity"
             android:exported="false" />
 
     </application>

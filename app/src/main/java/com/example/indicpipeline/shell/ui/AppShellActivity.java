@@ -1,6 +1,9 @@
 package com.example.indicpipeline.shell.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 
 import androidx.annotation.Nullable;
@@ -13,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.example.indicpipeline.R;
+import com.example.indicpipeline.settings.SettingsActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class AppShellActivity extends AppCompatActivity {
@@ -92,6 +96,23 @@ public class AppShellActivity extends AppCompatActivity {
             }
             return true;
         });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(Menu.NONE, 1, Menu.NONE, "Debug Settings")
+            .setIcon(android.R.drawable.ic_menu_preferences)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == 1) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }
 
