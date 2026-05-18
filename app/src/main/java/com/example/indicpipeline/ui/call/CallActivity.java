@@ -40,7 +40,7 @@ public class CallActivity extends AppCompatActivity {
     private Button btnMute, btnSpeaker, btnEnd;
 
     // Intent data
-    private String roomId, token;
+    private String callId, roomId, token;
     private boolean isCaller;
 
     // LiveKit session
@@ -53,6 +53,7 @@ public class CallActivity extends AppCompatActivity {
         setContentView(R.layout.activity_call);
 
         // Get intent data
+        callId = getIntent().getStringExtra("callId");
         roomId = getIntent().getStringExtra("roomId");
         token = getIntent().getStringExtra("livekitToken");
         isCaller = getIntent().getBooleanExtra("isCaller", false);
@@ -162,10 +163,12 @@ public class CallActivity extends AppCompatActivity {
             String userIdentity = FirebaseAuth.getInstance().getCurrentUser() == null ?
                     "unknown" : FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-            // LiveKit Cloud URL (adjust if using self-hosted)
-            String liveKitUrl = "wss://voicetovoicetranslationapp.livekit.cloud";
+            // Use configured LiveKit URL from CallConfig
+            String liveKitUrl = CallConfig.LIVEKIT_URL;
 
             Log.i(TAG, "Connecting to LiveKit: url=" + liveKitUrl + " room=" + roomId + " identity=" + userIdentity);
+            Log.i(TAG, "Token length: " + (token == null ? 0 : token.length()) + " chars");
+
             sessionManager.connect(liveKitUrl, roomId, token, userIdentity);
         }).start();
     }
@@ -192,7 +195,9 @@ public class CallActivity extends AppCompatActivity {
         Log.i(TAG, "Ending call");
 
         // Tell signaling backend to end the call
-        signaling.endCall("");
+        if (callId != null && !callId.isEmpty()) {
+            signaling.endCall(callId);
+        }
 
         // Disconnect LiveKit session
         if (sessionManager != null) {
@@ -233,7 +238,6 @@ public class CallActivity extends AppCompatActivity {
     public void onBackPressed() {
         Log.i(TAG, "Back pressed - ending call");
         endCall();
-        super.onBackPressed();
     }
 
     @Override

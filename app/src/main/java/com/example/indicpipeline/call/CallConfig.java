@@ -12,8 +12,21 @@ public final class CallConfig {
     // Default Socket.IO signaling server URL (can be overridden in SettingsActivity)
     public static final String SIGNALING_SERVER_URL = "https://voicetovoicetranslationapp-production.up.railway.app/";
 
-    // Default LiveKit token server base URL (can be overridden in SettingsActivity)
-    public static final String TOKEN_SERVER_BASE_URL = "https://voicetovoicetranslationapp-production.up.railway.app/";
+    // Default LiveKit token server base URL (matches MainActivity working setup)
+    public static final String TOKEN_SERVER_BASE_URL = "https://call-server-x3ug.vercel.app/api";
+
+    // LiveKit server URL - update this to your actual LiveKit server
+    // Examples:
+    // - Local: ws://192.168.1.2:7880
+    // - Cloud: wss://your-workspace.livekit.cloud
+    // - Railway: Update after deploying LiveKit
+    public static final String LIVEKIT_URL = "wss://indicpipelineapp-0vui3jrn.livekit.cloud";
+
+    // For debug: set to true to see detailed logs
+    public static final boolean DEBUG_LOGS = true;
 }
+
+
+
 
 
