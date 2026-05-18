@@ -1,5 +1,6 @@
 package com.example.indicpipeline.contacts.friend_detail;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
@@ -72,8 +73,11 @@ public class FriendDetailActivity extends AppCompatActivity {
         }
 
         callButton.setOnClickListener(v -> {
-            // Placeholder for future LiveKit calling
-            // This will navigate to the call screen when implemented
+            // Start outgoing call flow using SignalingRepository / socket
+            Intent i = new Intent(this, com.example.indicpipeline.ui.call.OutgoingCallActivity.class);
+            i.putExtra("targetUid", friendUid);
+            i.putExtra("targetName", friendName);
+            startActivity(i);
         });
 
         messageButton.setOnClickListener(v -> {

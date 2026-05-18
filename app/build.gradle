@@ -83,4 +83,10 @@ dependencies {
 
     // HTTP client (for requesting LiveKit tokens from your PC server)
     implementation "com.squareup.okhttp3:okhttp:4.12.0"
+
+    // Socket.IO client for realtime signaling
+    implementation 'io.socket:socket.io-client:2.0.1' // socket.io client (uses org.json)
+
+    // Gson for JSON -> models convenience
+    implementation 'com.google.code.gson:gson:2.10.1'
 }

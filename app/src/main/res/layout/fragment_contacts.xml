@@ -81,7 +81,7 @@
                 android:layout_width="72dp"
                 android:layout_height="72dp"
                 android:src="@drawable/ic_contacts"
-                android:tint="@color/app_primary"
+                app:tint="@color/app_primary"
                 android:contentDescription="@null" />
 
             <com.google.android.material.textview.MaterialTextView
