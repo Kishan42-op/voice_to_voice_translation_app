@@ -74,21 +74,19 @@ public class CallActivity extends AppCompatActivity {
         btnMute.setSelected(false); // initially unmuted
         btnSpeaker.setSelected(true); // initially speaker on
 
-        // Mute button: toggle mute state
+        // Mute button: toggle mute state with visual feedback
         btnMute.setOnClickListener(v -> {
             if (sessionManager != null) {
                 sessionManager.toggleMute();
-                btnMute.setSelected(sessionManager.isMuted());
-                Log.i(TAG, "Mute toggled: " + sessionManager.isMuted());
+                updateMuteButton();
             }
         });
 
-        // Speaker button: toggle speaker state
+        // Speaker button: toggle speaker state with visual feedback
         btnSpeaker.setOnClickListener(v -> {
             if (sessionManager != null) {
                 sessionManager.toggleSpeaker();
-                btnSpeaker.setSelected(sessionManager.isSpeakerOn());
-                Log.i(TAG, "Speaker toggled: " + sessionManager.isSpeakerOn());
+                updateSpeakerButton();
             }
         });
 
@@ -135,6 +133,10 @@ public class CallActivity extends AppCompatActivity {
         sessionManager.getIsConnected().observe(this, isConnected -> {
             Log.i(TAG, "Room connection state: " + isConnected);
             tvStatus.setText(isConnected ? "Connected" : "Disconnected");
+            if (isConnected) {
+                updateMuteButton();
+                updateSpeakerButton();
+            }
         });
 
         // Observe remote participant connection
@@ -203,6 +205,35 @@ public class CallActivity extends AppCompatActivity {
 
         // Close activity
         finish();
+    }
+
+    /**
+     * Update mute button visual state.
+     */
+    private void updateMuteButton() {
+        boolean muted = sessionManager != null && sessionManager.isMuted();
+        btnMute.setSelected(muted);
+        btnMute.setText(muted ? "Unmute" : "Mute");
+        btnMute.setAlpha(muted ? 0.6f : 1.0f);
+        Log.i(TAG, "Mute: " + (muted ? "ON" : "OFF"));
+    }
+
+    /**
+     * Update speaker button visual state.
+     */
+    private void updateSpeakerButton() {
+        boolean speakerOn = sessionManager != null && sessionManager.isSpeakerOn();
+        btnSpeaker.setSelected(speakerOn);
+        btnSpeaker.setText(speakerOn ? "Speaker" : "Earpiece");
+        btnSpeaker.setAlpha(speakerOn ? 1.0f : 0.6f);
+        Log.i(TAG, "Speaker: " + (speakerOn ? "ON" : "OFF"));
+    }
+
+    @Override
+    public void onBackPressed() {
+        Log.i(TAG, "Back pressed - ending call");
+        endCall();
+        super.onBackPressed();
     }
 
     @Override
