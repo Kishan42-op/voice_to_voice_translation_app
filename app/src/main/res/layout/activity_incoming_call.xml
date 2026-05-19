@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp"
-    android:background="#FFFFFF">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/tvIncomingName"
@@ -13,7 +13,8 @@
         android:layout_height="wrap_content"
         android:text="Incoming Call"
         android:textSize="28sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface" />
 
     <LinearLayout
         android:layout_width="wrap_content"

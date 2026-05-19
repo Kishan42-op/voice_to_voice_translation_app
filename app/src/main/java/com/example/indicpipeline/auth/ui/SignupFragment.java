@@ -169,11 +169,16 @@ public class SignupFragment extends Fragment {
     }
 
     private void routeNext(User user) {
-        if (user == null || user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+        if (isProfileIncomplete(user)) {
             Intent intent = new Intent(requireContext(), UsernameSetupActivity.class);
             if (user != null) {
                 intent.putExtra(UsernameSetupActivity.EXTRA_NAME, user.getName());
                 intent.putExtra(UsernameSetupActivity.EXTRA_EMAIL, user.getEmail());
+                intent.putExtra(UsernameSetupActivity.EXTRA_USERNAME, user.getUsername());
+                if (user.getPreferredLanguage() != null) {
+                    intent.putExtra(UsernameSetupActivity.EXTRA_PREFERRED_LANGUAGE_NAME, user.getPreferredLanguage().getName());
+                    intent.putExtra(UsernameSetupActivity.EXTRA_PREFERRED_LANGUAGE_CODE, user.getPreferredLanguage().getCode());
+                }
             }
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
@@ -185,6 +190,16 @@ public class SignupFragment extends Fragment {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         requireActivity().finishAffinity();
+    }
+
+    private boolean isProfileIncomplete(User user) {
+        if (user == null) {
+            return true;
+        }
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            return true;
+        }
+        return user.getPreferredLanguage() == null || user.getPreferredLanguage().getCode() == null || user.getPreferredLanguage().getCode().trim().isEmpty();
     }
 }
 

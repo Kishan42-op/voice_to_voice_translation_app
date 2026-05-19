@@ -40,6 +40,7 @@ public class SessionViewModel extends ViewModel {
                             user.getName() != null ? user.getName() : currentUser.getDisplayName(),
                             user.getEmail() != null ? user.getEmail() : currentUser.getEmail(),
                             null,
+                            user.getPreferredLanguage(),
                             user.getCreatedAt()
                     )));
                     return;
@@ -53,6 +54,7 @@ public class SessionViewModel extends ViewModel {
                         currentUser.getUid(),
                         currentUser.getDisplayName(),
                         currentUser.getEmail(),
+                        null,
                         null,
                         null
                 )));

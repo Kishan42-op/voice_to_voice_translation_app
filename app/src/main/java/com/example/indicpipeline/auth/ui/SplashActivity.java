@@ -35,7 +35,7 @@ public class SplashActivity extends AppCompatActivity {
             User user = state.getData();
             if (user == null) {
                 openAuth();
-            } else if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            } else if (isProfileIncomplete(user)) {
                 openUsernameSetup(user);
             } else {
                 openHome();
@@ -61,11 +61,26 @@ public class SplashActivity extends AppCompatActivity {
 
     private void openUsernameSetup(User user) {
         Intent intent = new Intent(this, UsernameSetupActivity.class);
-        intent.putExtra(UsernameSetupActivity.EXTRA_NAME, user.getName());
-        intent.putExtra(UsernameSetupActivity.EXTRA_EMAIL, user.getEmail());
+        intent.putExtra("extra_name", user.getName());
+        intent.putExtra("extra_email", user.getEmail());
+        intent.putExtra("extra_username", user.getUsername());
+        if (user.getPreferredLanguage() != null) {
+            intent.putExtra("extra_preferred_language_name", user.getPreferredLanguage().getName());
+            intent.putExtra("extra_preferred_language_code", user.getPreferredLanguage().getCode());
+        }
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private boolean isProfileIncomplete(User user) {
+        if (user == null) {
+            return true;
+        }
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            return true;
+        }
+        return user.getPreferredLanguage() == null || user.getPreferredLanguage().getCode() == null || user.getPreferredLanguage().getCode().trim().isEmpty();
     }
 }
 

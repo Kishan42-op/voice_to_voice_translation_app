@@ -12,20 +12,26 @@ public class User {
     private String name;
     private String email;
     private String username;
+    private PreferredLanguage preferredLanguage;
     private Timestamp createdAt;
 
     public User() {
     }
 
     public User(String uid, String name, String email, Timestamp createdAt) {
-        this(uid, name, email, null, createdAt);
+        this(uid, name, email, null, null, createdAt);
     }
 
     public User(String uid, String name, String email, String username, Timestamp createdAt) {
+        this(uid, name, email, username, null, createdAt);
+    }
+
+    public User(String uid, String name, String email, String username, PreferredLanguage preferredLanguage, Timestamp createdAt) {
         this.uid = uid;
         this.name = name;
         this.email = email;
         this.username = username;
+        this.preferredLanguage = preferredLanguage;
         this.createdAt = createdAt;
     }
 
@@ -59,6 +65,14 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public PreferredLanguage getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(PreferredLanguage preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
     }
 
     public Timestamp getCreatedAt() {

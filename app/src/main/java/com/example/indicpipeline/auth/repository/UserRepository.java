@@ -2,7 +2,9 @@ package com.example.indicpipeline.auth.repository;
 
 import androidx.annotation.NonNull;
 
+import com.example.indicpipeline.language.LanguageCatalog;
 import com.example.indicpipeline.models.User;
+import com.example.indicpipeline.models.PreferredLanguage;
 import com.example.indicpipeline.utils.AuthErrorMapper;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -74,7 +76,7 @@ public class UserRepository {
                 });
     }
 
-    public void saveUserProfile(FirebaseUser firebaseUser, String name, String username, AuthRepository.AuthResultCallback<User> callback) {
+    public void saveUserProfile(FirebaseUser firebaseUser, String name, String username, PreferredLanguage preferredLanguage, AuthRepository.AuthResultCallback<User> callback) {
         if (firebaseUser == null) {
             callback.onError("Authenticated user not found.");
             return;
@@ -84,6 +86,11 @@ public class UserRepository {
         String normalizedName = name == null ? "" : name.trim();
         if (normalizedUsername == null) {
             callback.onError("Use 3-20 lowercase letters, numbers, or underscores.");
+            return;
+        }
+
+        if (!LanguageCatalog.isSupported(preferredLanguage)) {
+            callback.onError("Please choose a supported preferred language.");
             return;
         }
 
@@ -115,6 +122,7 @@ public class UserRepository {
             userMap.put("name", normalizedName);
             userMap.put("email", firebaseUser.getEmail());
             userMap.put("username", normalizedUsername);
+            userMap.put("preferredLanguage", preferredLanguage);
             userMap.put("createdAt", createdAt);
             transaction.set(userRef, userMap);
 
@@ -131,7 +139,7 @@ public class UserRepository {
                 }
             }
 
-            return new User(firebaseUser.getUid(), normalizedName, firebaseUser.getEmail(), normalizedUsername, createdAt);
+            return new User(firebaseUser.getUid(), normalizedName, firebaseUser.getEmail(), normalizedUsername, preferredLanguage, createdAt);
         }).addOnSuccessListener(callback::onSuccess)
                 .addOnFailureListener(exception -> callback.onError(AuthErrorMapper.map(exception)));
     }

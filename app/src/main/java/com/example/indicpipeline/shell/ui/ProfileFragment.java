@@ -31,6 +31,7 @@ public class ProfileFragment extends Fragment {
     private MaterialTextView nameView;
     private MaterialTextView usernameView;
     private MaterialTextView emailView;
+    private MaterialTextView preferredLanguageView;
     private MaterialButton logoutButton;
 
     public ProfileFragment() {
@@ -56,6 +57,7 @@ public class ProfileFragment extends Fragment {
         nameView = view.findViewById(R.id.tvProfileName);
         usernameView = view.findViewById(R.id.tvProfileUsername);
         emailView = view.findViewById(R.id.tvProfileEmail);
+        preferredLanguageView = view.findViewById(R.id.tvProfilePreferredLanguage);
         logoutButton = view.findViewById(R.id.btnProfileLogout);
 
         logoutButton.setOnClickListener(v -> performLogout());
@@ -114,6 +116,14 @@ public class ProfileFragment extends Fragment {
         nameView.setText(user.getName() != null ? user.getName() : "");
         usernameView.setText(user.getUsername() != null ? "@" + user.getUsername() : "");
         emailView.setText(user.getEmail() != null ? user.getEmail() : "");
+        if (user.getPreferredLanguage() != null && user.getPreferredLanguage().getName() != null) {
+            String code = user.getPreferredLanguage().getCode();
+            preferredLanguageView.setText(code != null && !code.trim().isEmpty()
+                    ? user.getPreferredLanguage().getName() + " (" + code + ")"
+                    : user.getPreferredLanguage().getName());
+        } else {
+            preferredLanguageView.setText(getString(R.string.shell_profile_language_missing));
+        }
         scrollProfile.setVisibility(View.VISIBLE);
     }
 

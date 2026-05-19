@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.indicpipeline.auth.repository.AuthRepository;
 import com.example.indicpipeline.auth.repository.UserRepository;
 import com.example.indicpipeline.core.Resource;
+import com.example.indicpipeline.models.PreferredLanguage;
 import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.utils.AuthValidator;
 import com.google.firebase.auth.FirebaseUser;
@@ -23,7 +24,7 @@ public class UsernameSetupViewModel extends ViewModel {
         profileState.setValue(null);
     }
 
-    public void saveProfile(String name, String username) {
+    public void saveProfile(String name, String username, PreferredLanguage preferredLanguage) {
         profileState.setValue(Resource.loading());
 
         String nameError = AuthValidator.validateName(name);
@@ -35,6 +36,11 @@ public class UsernameSetupViewModel extends ViewModel {
         String usernameError = AuthValidator.validateUsername(username);
         if (usernameError != null) {
             profileState.setValue(Resource.error(usernameError));
+            return;
+        }
+
+        if (preferredLanguage == null || preferredLanguage.getName() == null || preferredLanguage.getCode() == null) {
+            profileState.setValue(Resource.error("Preferred language is required."));
             return;
         }
 
@@ -52,7 +58,7 @@ public class UsernameSetupViewModel extends ViewModel {
                     return;
                 }
 
-                userRepository.saveUserProfile(currentUser, name.trim(), username.trim(), new AuthRepository.AuthResultCallback<User>() {
+                userRepository.saveUserProfile(currentUser, name.trim(), username.trim(), preferredLanguage, new AuthRepository.AuthResultCallback<User>() {
                     @Override
                     public void onSuccess(User user) {
                         profileState.postValue(Resource.success(user));

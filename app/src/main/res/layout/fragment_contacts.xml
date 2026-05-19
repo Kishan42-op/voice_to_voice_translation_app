@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -14,14 +15,13 @@
         app:titleTextColor="@color/app_on_surface"
         app:backgroundTint="@color/app_background" />
 
-    <!-- Search Bar -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
         android:hint="@string/contacts_search_hint"
         app:boxBackgroundMode="outline"
         app:endIconMode="clear_text"
@@ -40,80 +40,117 @@
             android:focusableInTouchMode="true" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Loading Progress -->
-    <com.google.android.material.progressindicator.CircularProgressIndicator
-        android:id="@+id/progressContacts"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="16dp"
-        android:visibility="gone"
-        app:indicatorColor="@color/app_primary" />
-
-    <!-- Error Text -->
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/tvContactsError"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="4dp"
         android:gravity="center"
         android:padding="12dp"
         android:textColor="@color/app_error"
-        android:visibility="gone" />
+        android:visibility="gone"
+        tools:text="Error loading contacts" />
 
-    <!-- Empty State -->
-    <FrameLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
-            android:id="@+id/tvContactsEmpty"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center"
-            android:padding="32dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:src="@drawable/ic_contacts"
-                app:tint="@color/app_primary"
-                android:contentDescription="@null" />
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="16dp">
 
             <com.google.android.material.textview.MaterialTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/contacts_empty_title"
+                android:text="@string/contacts_users_title"
                 android:textColor="@color/app_on_surface"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progressUsers"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:indicatorColor="@color/app_primary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvUsersEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:padding="12dp"
+                android:textColor="@color/app_on_surface_variant"
+                android:visibility="gone"
+                tools:text="No users found" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerUsers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="20dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingBottom="8dp"
+                android:scrollbars="vertical" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginBottom="20dp"
+                android:background="@color/app_outline" />
+
             <com.google.android.material.textview.MaterialTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="@string/contacts_empty_subtitle"
-                android:textColor="@color/app_on_surface_variant"
-                android:textSize="14sp" />
-        </LinearLayout>
+                android:layout_marginTop="4dp"
+                android:text="@string/contacts_friends_title"
+                android:textColor="@color/app_on_surface"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-        <!-- Contacts RecyclerView -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerContacts"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingHorizontal="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="16dp"
-            android:scrollbars="vertical" />
-    </FrameLayout>
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progressFriends"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:indicatorColor="@color/app_primary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvFriendsEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:padding="12dp"
+                android:textColor="@color/app_on_surface_variant"
+                android:visibility="gone"
+                tools:text="No friends yet" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerFriends"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingBottom="8dp"
+                android:scrollbars="vertical" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>
 

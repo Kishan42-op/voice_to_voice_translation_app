@@ -17,8 +17,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.indicpipeline.R;
+import com.example.indicpipeline.contacts.friend_detail.FriendDetailActivity;
 import com.example.indicpipeline.core.Resource;
 import com.example.indicpipeline.contacts.model.UserConnectionItem;
+import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.shell.adapter.ShellUserAdapter;
 import com.example.indicpipeline.shell.viewmodel.FriendRequestViewModel;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
@@ -63,6 +65,19 @@ public class SearchFragment extends Fragment {
             @Override
             public void onAcceptRequest(String requestId) {
                 friendRequestViewModel.acceptFriendRequest(requestId);
+            }
+
+            @Override
+            public void onUserClick(User user) {
+                if (user == null || user.getUid() == null) {
+                    return;
+                }
+                android.content.Intent intent = new android.content.Intent(requireActivity(), FriendDetailActivity.class);
+                intent.putExtra("friend_uid", user.getUid());
+                intent.putExtra("friend_username", user.getUsername());
+                intent.putExtra("friend_name", user.getName());
+                intent.putExtra("friend_email", user.getEmail());
+                startActivity(intent);
             }
         });
 

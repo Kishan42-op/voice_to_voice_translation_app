@@ -58,6 +58,7 @@ public class AuthViewModel extends ViewModel {
                         name,
                         result.getEmail(),
                         null,
+                        null,
                         null
                 );
                 authState.postValue(Resource.success(pendingProfile));
@@ -91,6 +92,7 @@ public class AuthViewModel extends ViewModel {
                             user.getName() != null ? user.getName() : firebaseUser.getDisplayName(),
                             user.getEmail() != null ? user.getEmail() : firebaseUser.getEmail(),
                             null,
+                            user.getPreferredLanguage(),
                             user.getCreatedAt()
                     )));
                     return;
@@ -104,6 +106,7 @@ public class AuthViewModel extends ViewModel {
                         firebaseUser.getUid(),
                         firebaseUser.getDisplayName(),
                         firebaseUser.getEmail(),
+                        null,
                         null,
                         null
                 );
