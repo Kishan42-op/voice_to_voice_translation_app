@@ -53,9 +53,10 @@ public class IncomingCallActivity extends AppCompatActivity {
                 }
 
                 Intent i = new Intent(IncomingCallActivity.this, CallActivity.class);
+                i.putExtra("callId", callId);
                 i.putExtra("roomId", roomId);
                 i.putExtra("livekitToken", token);
-                i.putExtra("isCaller", false);
+                i.putExtra("isCaller", false); // receiving side
                 runOnUiThread(() -> {
                     startActivity(i);
                     finish();

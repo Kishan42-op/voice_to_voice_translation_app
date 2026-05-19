@@ -83,6 +83,7 @@ public class OutgoingCallActivity extends AppCompatActivity {
                             return;
                         }
                         Intent i = new Intent(OutgoingCallActivity.this, CallActivity.class);
+                        i.putExtra("callId", currentCallId);
                         i.putExtra("roomId", currentRoomId);
                         i.putExtra("livekitToken", token);
                         i.putExtra("isCaller", true);

@@ -1,0 +1,24 @@
+E:\GreenAI\voice_to_voice_translation_app\app\src\main\java\com\example\indicpipeline\auth\viewmodel\AuthViewModel.java:88: error: cannot find symbol
+        userRepository.getUserDocument(firebaseUser.getUid(), new AuthRepository.AuthResultCallback<User>() {
+                      ^
+  symbol:   method getUserDocument(String,<anonymous AuthResultCallback<User>>)
+  location: variable userRepository of type UserRepository
+1 error
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugJavaWithJavac'.
+> Compilation failed; see the compiler output below.
+  E:\GreenAI\voice_to_voice_translation_app\app\src\main\java\com\example\indicpipeline\auth\viewmodel\AuthViewModel.java:88: error: cannot find symbol
+          userRepository.getUserDocument(firebaseUser.getUid(), new AuthRepository.AuthResultCallback<User>() {
+                        ^
+    symbol:   method getUserDocument(String,<anonymous AuthResultCallback<User>>)
+    location: variable userRepository of type UserRepository
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+BUILD FAILED in 12m 18s
