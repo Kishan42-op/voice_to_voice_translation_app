@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import ai.onnxruntime.OrtEnvironment;
 
 import com.example.indicpipeline.auth.viewmodel.AuthViewModel;
+import com.example.indicpipeline.language.LanguageCatalog;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -191,18 +192,7 @@ public class MainActivity extends AppCompatActivity {
      }
 
     private void setupLanguages() {
-        languages = new ArrayList<>();
-        languages.add(new LangConfig("Hindi", "hi", "hin_Deva", "hin"));
-        languages.add(new LangConfig("Gujarati", "gu", "guj_Gujr", "guj"));
-        languages.add(new LangConfig("Marathi", "mr", "mar_Deva", "mar"));
-        languages.add(new LangConfig("Bengali", "bn", "ben_Beng", "ben"));
-        languages.add(new LangConfig("Tamil", "ta", "tam_Taml", "tam"));
-        languages.add(new LangConfig("Telugu", "te", "tel_Telu", "tel"));
-        languages.add(new LangConfig("Kannada", "kn", "kan_Knda", "kan"));
-        languages.add(new LangConfig("Malayalam", "ml", "mal_Mlym", "mal"));
-        languages.add(new LangConfig("Odia", "or", "ory_Orya", "ory"));
-        languages.add(new LangConfig("Punjabi", "pa", "pan_Guru", "pan"));
-        languages.add(new LangConfig("Assamese", "as", "asm_Beng", "asm"));
+        languages = new ArrayList<>(LanguageCatalog.getSupportedLanguages());
 
         ArrayAdapter<LangConfig> adapter = new ArrayAdapter<>(this, R.layout.spinner_language_item, languages);
         adapter.setDropDownViewResource(R.layout.spinner_language_dropdown_item);
@@ -292,6 +282,9 @@ public class MainActivity extends AppCompatActivity {
         tvSystemStatus.setText("Listening...");
 
         LangConfig myLang = (LangConfig) myLanguageSpinner.getSelectedItem();
+        // TODO(call-session): replace this manual picker with the authenticated user's
+        // preferredLanguage from Firestore, and use peer metadata to pre-load only the
+        // opposite-device resources needed for the future distributed call pipeline.
 
         recorder.setChunkListener(chunk -> {
             if (!isSpeaking) {
@@ -451,6 +444,8 @@ public class MainActivity extends AppCompatActivity {
         tvSystemStatus.setText("Getting token...");
 
         LangConfig myLang = (LangConfig) myLanguageSpinner.getSelectedItem();
+        // TODO(call-session): use the current user's stored preferredLanguage instead of this
+        // debug/runtime selector so outgoing speech processing follows the profile setting.
         liveKitSelfUserId = userId;
 
         // 1) Fetch token from your PC token server
@@ -587,6 +582,8 @@ public class MainActivity extends AppCompatActivity {
     private void handleIncomingSpeech(String fromUser, String text, String srcTransCode) {
         try {
             LangConfig myLang = (LangConfig) myLanguageSpinner.getSelectedItem();
+            // TODO(call-session): the receiver-side resource loader should read the peer's
+            // preferredLanguage from session metadata and only initialize the target-language stack.
 
             runOnUiThread(() -> {
                 tvSystemStatus.setText("Incoming... Translating");

@@ -10,6 +10,7 @@ import com.example.indicpipeline.call.CallConfig;
 import com.example.indicpipeline.call.signaling.CallEvent;
 import com.example.indicpipeline.call.signaling.SignalingRepository;
 import com.example.indicpipeline.call.socket.SocketManager;
+import com.example.indicpipeline.utils.NotificationManager;
 
 /**
  * Application entry: initialize socket manager and observe incoming calls.
@@ -31,6 +32,13 @@ public class App extends Application {
             public void onChanged(CallEvent callEvent) {
                 if (callEvent == null) return;
                 try {
+                    // Show notification for incoming call
+                    NotificationManager.showIncomingCallNotification(
+                            getApplicationContext(),
+                            callEvent.fromName,
+                            callEvent.callId
+                    );
+
                     Intent i = new Intent(getApplicationContext(), com.example.indicpipeline.ui.call.IncomingCallActivity.class);
                     i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                     i.putExtra("callId", callEvent.callId);

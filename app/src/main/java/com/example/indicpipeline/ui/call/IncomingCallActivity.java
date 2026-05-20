@@ -12,6 +12,7 @@ import com.example.indicpipeline.call.CallConfig;
 import com.example.indicpipeline.call.livekit.LiveKitManager;
 import com.example.indicpipeline.call.signaling.SignalingRepository;
 import com.example.indicpipeline.call.state.CallStateManager;
+import com.example.indicpipeline.utils.NotificationManager;
 import com.google.firebase.auth.FirebaseAuth;
 
 /**
@@ -41,6 +42,9 @@ public class IncomingCallActivity extends AppCompatActivity {
         tvName.setText(fromName == null ? "Incoming Call" : fromName);
 
         btnAccept.setOnClickListener(v -> {
+            // Cancel the notification once user interacts with the call
+            NotificationManager.cancelIncomingCallNotification(IncomingCallActivity.this);
+
             signaling.acceptCall(callId);
             CallStateManager.getInstance().setState(CallStateManager.CallState.CONNECTED);
 
@@ -65,10 +69,20 @@ public class IncomingCallActivity extends AppCompatActivity {
         });
 
         btnReject.setOnClickListener(v -> {
+            // Cancel the notification when rejecting the call
+            NotificationManager.cancelIncomingCallNotification(IncomingCallActivity.this);
+
             signaling.rejectCall(callId);
             CallStateManager.getInstance().setState(CallStateManager.CallState.REJECTED);
             finish();
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Cancel notification when activity is destroyed
+        NotificationManager.cancelIncomingCallNotification(this);
     }
 }
 

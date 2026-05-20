@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModel;
 import com.example.indicpipeline.auth.repository.AuthRepository;
 import com.example.indicpipeline.auth.repository.UserRepository;
 import com.example.indicpipeline.core.Resource;
+import com.example.indicpipeline.models.PreferredLanguage;
 import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.utils.AuthValidator;
 import com.google.firebase.auth.FirebaseUser;
+import android.util.Log;
 
 public class UsernameSetupViewModel extends ViewModel {
     private final UserRepository userRepository = new UserRepository();
@@ -23,7 +25,7 @@ public class UsernameSetupViewModel extends ViewModel {
         profileState.setValue(null);
     }
 
-    public void saveProfile(String name, String username) {
+    public void saveProfile(String name, String username, PreferredLanguage preferredLanguage) {
         profileState.setValue(Resource.loading());
 
         String nameError = AuthValidator.validateName(name);
@@ -38,10 +40,24 @@ public class UsernameSetupViewModel extends ViewModel {
             return;
         }
 
+        if (preferredLanguage == null || preferredLanguage.getName() == null || preferredLanguage.getCode() == null) {
+            profileState.setValue(Resource.error("Preferred language is required."));
+            return;
+        }
+
         FirebaseUser currentUser = userRepository.getCurrentUser();
         if (currentUser == null) {
             profileState.setValue(Resource.error("Authenticated user not found."));
             return;
+        }
+
+        // Debug log to help diagnose permission errors coming from Firestore rules
+        try {
+            Log.d("UsernameSetupVM", "saveProfile: uid=" + currentUser.getUid()
+                    + " name=" + name + " username=" + username
+                    + " preferredLanguage=" + (preferredLanguage == null ? "null" : preferredLanguage.getName() + ":" + preferredLanguage.getCode()));
+        } catch (Exception e) {
+            Log.w("UsernameSetupVM", "Failed to log profile save attempt", e);
         }
 
         userRepository.checkUsernameAvailability(username, new AuthRepository.AuthResultCallback<Boolean>() {
@@ -52,7 +68,7 @@ public class UsernameSetupViewModel extends ViewModel {
                     return;
                 }
 
-                userRepository.saveUserProfile(currentUser, name.trim(), username.trim(), new AuthRepository.AuthResultCallback<User>() {
+                userRepository.saveUserProfile(currentUser, name.trim(), username.trim(), preferredLanguage, new AuthRepository.AuthResultCallback<User>() {
                     @Override
                     public void onSuccess(User user) {
                         profileState.postValue(Resource.success(user));
@@ -72,4 +88,3 @@ public class UsernameSetupViewModel extends ViewModel {
         });
     }
 }
-

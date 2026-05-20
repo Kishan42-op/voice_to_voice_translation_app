@@ -7,7 +7,7 @@
     <string name="title_signup">Create account</string>
     <string name="subtitle_signup">Sign up to start calling and syncing your profile</string>
     <string name="title_username_setup">Set up your username</string>
-    <string name="subtitle_username_setup">Choose a unique username so other users can find you.</string>
+    <string name="subtitle_username_setup">Choose a unique username and preferred language so your call pipeline can be prepared later.</string>
     <string name="title_home">Search users</string>
     <string name="title_shell_home">Home</string>
     <string name="title_shell_search">Search</string>
@@ -55,12 +55,16 @@
     <string name="shell_profile_name_label">Name</string>
     <string name="shell_profile_username_label">Username</string>
     <string name="shell_profile_email_label">Email</string>
+    <string name="shell_profile_language_label">Preferred language</string>
+    <string name="shell_profile_language_missing">Not set</string>
     <string name="shell_avatar_fallback">U</string>
     <string name="hint_name">Name</string>
     <string name="hint_email">Email</string>
     <string name="hint_password">Password</string>
     <string name="hint_confirm_password">Confirm password</string>
     <string name="hint_username">Username</string>
+    <string name="hint_preferred_language">Preferred language</string>
+    <string name="error_preferred_language_required">Please select a preferred language.</string>
     <string name="hint_search_users">Search by username</string>
     <string name="btn_login">Login</string>
     <string name="btn_signup">Sign up</string>
@@ -93,11 +97,11 @@
 
     <!-- Phase 4: Contacts and Modern UI -->
     <string name="contacts_title">Contacts</string>
-    <string name="contacts_search_hint">Search contacts</string>
-    <string name="contacts_empty_title">No contacts yet</string>
-    <string name="contacts_empty_subtitle">Find users and add them as friends to start calling.</string>
-    <string name="contacts_recent_title">Recent Friends</string>
-    <string name="contacts_all_title">All Friends</string>
+    <string name="contacts_search_hint">Search users</string>
+    <string name="contacts_users_title">Users</string>
+    <string name="contacts_users_empty_default">No users available yet.</string>
+    <string name="contacts_friends_title">Friends</string>
+    <string name="contacts_friends_empty">No friends yet.</string>
     <string name="contact_card_call">Call</string>
     <string name="contact_card_message">Message</string>
     <string name="friend_detail_title">Friend Profile</string>
@@ -106,4 +110,6 @@
     <string name="friend_detail_info">Contact Information</string>
     <string name="friend_detail_avatar_fallback">U</string>
     <string name="friend_detail_coming_soon">Coming soon</string>
+    <string name="loading_users">Loading users…</string>
+    <string name="loading_friends">Loading friends…</string>
 </resources>

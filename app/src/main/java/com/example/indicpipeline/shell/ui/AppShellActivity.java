@@ -1,13 +1,19 @@
 package com.example.indicpipeline.shell.ui;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Build;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -20,11 +26,19 @@ import com.example.indicpipeline.settings.SettingsActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class AppShellActivity extends AppCompatActivity {
+    private static final String PREFS_NAME = "app_shell_prefs";
+    private static final String KEY_NOTIFICATIONS_PROMPTED = "notifications_prompted";
+
     private BottomNavigationView bottomNavigation;
     private HomeFragment homeFragment;
     private ContactsFragment contactsFragment;
     private NotificationsFragment notificationsFragment;
     private ProfileFragment profileFragment;
+
+    private final ActivityResultLauncher<String> notificationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                markNotificationPrompted();
+            });
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -96,6 +110,36 @@ public class AppShellActivity extends AppCompatActivity {
             }
             return true;
         });
+
+        requestNotificationPermissionIfNeeded();
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+            markNotificationPrompted();
+            return;
+        }
+
+        if (wasNotificationPrompted()) {
+            return;
+        }
+
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    private boolean wasNotificationPrompted() {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return preferences.getBoolean(KEY_NOTIFICATIONS_PROMPTED, false);
+    }
+
+    private void markNotificationPrompted() {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        preferences.edit().putBoolean(KEY_NOTIFICATIONS_PROMPTED, true).apply();
     }
 
     @Override

@@ -23,6 +23,7 @@ public class ShellUserAdapter extends ListAdapter<UserConnectionItem, ShellUserA
         void onSendRequest(String uid);
 
         void onAcceptRequest(String requestId);
+        void onUserClick(User user);
     }
 
     private final OnUserActionListener listener;
@@ -51,7 +52,7 @@ public class ShellUserAdapter extends ListAdapter<UserConnectionItem, ShellUserA
                     && safeEquals(oldUser != null ? oldUser.getEmail() : null, newUser != null ? newUser.getEmail() : null)
                     && safeEquals(oldUser != null ? oldUser.getUsername() : null, newUser != null ? newUser.getUsername() : null)
                     && safeEquals(oldUser != null ? oldUser.getCreatedAt() : null, newUser != null ? newUser.getCreatedAt() : null)
-                    && oldItem.getRelationshipStatus() == newItem.getRelationshipStatus()
+                    && safeEquals(oldItem.getRelationshipStatus(), newItem.getRelationshipStatus())
                     && safeEquals(oldItem.getRequestId(), newItem.getRequestId());
         }
 
@@ -110,7 +111,9 @@ public class ShellUserAdapter extends ListAdapter<UserConnectionItem, ShellUserA
 
             RelationshipStatus status = item.getRelationshipStatus();
             if (status == RelationshipStatus.FRIENDS) {
-                bindActionButton(itemView.getContext().getString(R.string.shell_friend_request_friends), false, false, null);
+                if (actionButton != null) {
+                    actionButton.setVisibility(View.GONE);
+                }
             } else if (status == RelationshipStatus.REQUEST_SENT) {
                 bindActionButton(itemView.getContext().getString(R.string.shell_friend_request_sent), false, false, null);
             } else if (status == RelationshipStatus.REQUEST_RECEIVED) {
@@ -126,6 +129,12 @@ public class ShellUserAdapter extends ListAdapter<UserConnectionItem, ShellUserA
                     }
                 });
             }
+
+            cardView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onUserClick(user);
+                }
+            });
 
             cardView.setAlpha(1f);
             avatarView.setAlpha(1f);
