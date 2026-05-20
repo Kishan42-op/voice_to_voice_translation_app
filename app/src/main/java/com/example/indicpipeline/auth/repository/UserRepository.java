@@ -22,8 +22,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import android.util.Log;
 
 public class UserRepository {
+    private static final String TAG = "UserRepository";
     public interface UserSearchCallback {
         void onSuccess(List<User> users);
 
@@ -97,6 +99,8 @@ public class UserRepository {
         DocumentReference userRef = firestore.collection("users").document(firebaseUser.getUid());
         DocumentReference usernameRef = firestore.collection("usernames").document(normalizedUsername);
 
+        Log.d(TAG, "Attempting to save user profile uid=" + firebaseUser.getUid() + " usernameDoc=" + normalizedUsername + " preferredLanguage=" + (preferredLanguage == null ? "null" : preferredLanguage.getName() + ":" + preferredLanguage.getCode()));
+
         firestore.runTransaction((Transaction transaction) -> {
             DocumentSnapshot usernameSnapshot = transaction.get(usernameRef);
             if (usernameSnapshot.exists()) {
@@ -141,7 +145,11 @@ public class UserRepository {
 
             return new User(firebaseUser.getUid(), normalizedName, firebaseUser.getEmail(), normalizedUsername, preferredLanguage, createdAt);
         }).addOnSuccessListener(callback::onSuccess)
-                .addOnFailureListener(exception -> callback.onError(AuthErrorMapper.map(exception)));
+                .addOnFailureListener(exception -> {
+                    // Log full exception for troubleshooting permission errors
+                    Log.e(TAG, "Failed to save user profile for uid=" + firebaseUser.getUid(), exception);
+                    callback.onError(AuthErrorMapper.map(exception));
+                });
     }
 
     public void checkUsernameAvailability(String username, AuthRepository.AuthResultCallback<Boolean> callback) {
@@ -243,4 +251,3 @@ public class UserRepository {
         return normalized;
     }
 }
-

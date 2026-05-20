@@ -43,6 +43,8 @@
     <color name="app_outline">#8A9389</color>
     <color name="app_secondary_container">#374B3E</color>
     <color name="app_on_secondary_container">#D1E8D5</color>
+    <color name="app_primary_container">#00522E</color>
+    <color name="app_on_primary_container">#95F7B8</color>
     <color name="app_primary">#79DA9D</color>
     <color name="app_on_primary">#00391E</color>
     <color name="app_error">#FFB4AB</color>

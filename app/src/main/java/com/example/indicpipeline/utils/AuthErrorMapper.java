@@ -27,6 +27,10 @@ public final class AuthErrorMapper {
             return "No account found for this email.";
         }
         if (exception instanceof FirebaseFirestoreException) {
+            FirebaseFirestoreException firestoreException = (FirebaseFirestoreException) exception;
+            if (firestoreException.getCode() == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                return "Permission denied while saving profile. Please sign out, sign in again, and try once more.";
+            }
             return "Firestore error: " + exception.getMessage();
         }
         if (exception instanceof FirebaseAuthException) {

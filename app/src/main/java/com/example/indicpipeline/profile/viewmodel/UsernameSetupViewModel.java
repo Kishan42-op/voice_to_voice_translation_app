@@ -11,6 +11,7 @@ import com.example.indicpipeline.models.PreferredLanguage;
 import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.utils.AuthValidator;
 import com.google.firebase.auth.FirebaseUser;
+import android.util.Log;
 
 public class UsernameSetupViewModel extends ViewModel {
     private final UserRepository userRepository = new UserRepository();
@@ -50,6 +51,15 @@ public class UsernameSetupViewModel extends ViewModel {
             return;
         }
 
+        // Debug log to help diagnose permission errors coming from Firestore rules
+        try {
+            Log.d("UsernameSetupVM", "saveProfile: uid=" + currentUser.getUid()
+                    + " name=" + name + " username=" + username
+                    + " preferredLanguage=" + (preferredLanguage == null ? "null" : preferredLanguage.getName() + ":" + preferredLanguage.getCode()));
+        } catch (Exception e) {
+            Log.w("UsernameSetupVM", "Failed to log profile save attempt", e);
+        }
+
         userRepository.checkUsernameAvailability(username, new AuthRepository.AuthResultCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean available) {
@@ -78,4 +88,3 @@ public class UsernameSetupViewModel extends ViewModel {
         });
     }
 }
-
