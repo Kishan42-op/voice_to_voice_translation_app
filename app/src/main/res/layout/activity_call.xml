@@ -23,6 +23,16 @@
         android:layout_marginBottom="8dp" />
 
     <TextView
+        android:id="@+id/tvCallDuration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#444444"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
         android:id="@+id/tvRemoteParticipantName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

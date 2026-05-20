@@ -23,6 +23,9 @@ public class SignalingRepository {
     private final MutableLiveData<CallEvent> incomingCall = new MutableLiveData<>();
     private final MutableLiveData<CallEvent> callInitiated = new MutableLiveData<>();
     private final MutableLiveData<CallEvent> callAccepted = new MutableLiveData<>();
+    private final MutableLiveData<CallEvent> callRejected = new MutableLiveData<>();
+    private final MutableLiveData<CallEvent> callEnded = new MutableLiveData<>();
+    private final MutableLiveData<String> callError = new MutableLiveData<>();
 
     private SignalingRepository() {
         // listen for incoming-call
@@ -37,9 +40,9 @@ public class SignalingRepository {
                     ev.fromName = obj.optString("fromName");
                     ev.toUid = obj.optString("to");
                     ev.roomId = obj.optString("room");
-                    Log.i(TAG, "✓ Received incoming-call from " + ev.fromName + " (uid: " + ev.fromUid + ")");
+                    Log.i(TAG, "[CALL_FLOW] ✓ Received incoming-call from " + ev.fromName + " (uid: " + ev.fromUid + ")");
                     incomingCall.postValue(ev);
-                } catch (Exception e) { Log.e(TAG, "✗ incoming-call parse error", e); }
+                } catch (Exception e) { Log.e(TAG, "[CALL_FLOW] ✗ incoming-call parse error", e); }
             }
         });
 
@@ -53,9 +56,9 @@ public class SignalingRepository {
                     ev.fromUid = obj.optString("from");
                     ev.toUid = obj.optString("to");
                     ev.roomId = obj.optString("room");
-                    Log.i(TAG, "✓ Received call-accepted | room: " + ev.roomId);
+                    Log.i(TAG, "[CALL_FLOW] ✓ Received call-accepted | room: " + ev.roomId);
                     callAccepted.postValue(ev);
-                } catch (Exception e) { Log.e(TAG, "✗ call-accepted parse error", e); }
+                } catch (Exception e) { Log.e(TAG, "[CALL_FLOW] ✗ call-accepted parse error", e); }
             }
         });
 
@@ -67,9 +70,9 @@ public class SignalingRepository {
                     CallEvent ev = new CallEvent();
                     ev.callId = obj.optString("callId");
                     ev.roomId = obj.optString("room");
-                    Log.i(TAG, "✓ Call initiated with callId: " + ev.callId + " room: " + ev.roomId);
+                    Log.i(TAG, "[CALL_FLOW] ✓ Call initiated with callId: " + ev.callId + " room: " + ev.roomId);
                     callInitiated.postValue(ev);
-                } catch (Exception e) { Log.e(TAG, "✗ call-initiated error", e); }
+                } catch (Exception e) { Log.e(TAG, "[CALL_FLOW] ✗ call-initiated error", e); }
             }
         });
 
@@ -78,8 +81,27 @@ public class SignalingRepository {
             public void call(Object... args) {
                 try {
                     JSONObject obj = (JSONObject) args[0];
-                    Log.i(TAG, "✗ Call rejected for callId: " + obj.optString("callId"));
-                } catch (Exception e) { Log.e(TAG, "✗ call-rejected error", e); }
+                    CallEvent ev = new CallEvent();
+                    ev.callId = obj.optString("callId");
+                    ev.fromUid = obj.optString("from");
+                    ev.toUid = obj.optString("to");
+                    ev.roomId = obj.optString("room");
+                    Log.i(TAG, "[CALL_FLOW] ✗ Call rejected for callId: " + ev.callId);
+                    callRejected.postValue(ev);
+                } catch (Exception e) { Log.e(TAG, "[CALL_FLOW] ✗ call-rejected error", e); }
+            }
+        });
+
+        socket.on("call-ended", new io.socket.emitter.Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                try {
+                    JSONObject obj = (JSONObject) args[0];
+                    CallEvent ev = new CallEvent();
+                    ev.callId = obj.optString("callId");
+                    Log.i(TAG, "[CALL_FLOW] ✗ Call ended for callId: " + ev.callId);
+                    callEnded.postValue(ev);
+                } catch (Exception e) { Log.e(TAG, "[CALL_FLOW] ✗ call-ended error", e); }
             }
         });
 
@@ -89,8 +111,9 @@ public class SignalingRepository {
                 try {
                     JSONObject obj = (JSONObject) args[0];
                     String reason = obj.optString("reason", "unknown");
-                    Log.e(TAG, "✗ Call error: " + reason);
-                } catch (Exception e) { Log.e(TAG, "✗ call-error parse error", e); }
+                    Log.e(TAG, "[CALL_FLOW] ✗ Call error: " + reason);
+                    callError.postValue(reason);
+                } catch (Exception e) { Log.e(TAG, "[CALL_FLOW] ✗ call-error parse error", e); }
             }
         });
     }
@@ -100,9 +123,35 @@ public class SignalingRepository {
         return instance;
     }
 
+    /**
+     * Clear all current call event LiveData to prevent stale events from affecting new calls.
+     */
+    public void clearEvents() {
+        Log.i(TAG, "[CALL_FLOW] Clearing all signaling events");
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            incomingCall.setValue(null);
+            callInitiated.setValue(null);
+            callAccepted.setValue(null);
+            callRejected.setValue(null);
+            callEnded.setValue(null);
+            callError.setValue(null);
+        } else {
+            incomingCall.postValue(null);
+            callInitiated.postValue(null);
+            callAccepted.postValue(null);
+            callRejected.postValue(null);
+            callEnded.postValue(null);
+            callError.postValue(null);
+        }
+    }
+
+
     public LiveData<CallEvent> getIncomingCall() { return incomingCall; }
     public LiveData<CallEvent> getCallInitiated() { return callInitiated; }
     public LiveData<CallEvent> getCallAccepted() { return callAccepted; }
+    public LiveData<CallEvent> getCallRejected() { return callRejected; }
+    public LiveData<CallEvent> getCallEnded() { return callEnded; }
+    public LiveData<String> getCallError() { return callError; }
 
     public void callUser(String targetUid, String displayName) {
         try {
@@ -111,9 +160,9 @@ public class SignalingRepository {
             p.put("to", targetUid);
             p.put("from", from);
             p.put("fromName", displayName == null ? "" : displayName);
+            Log.i(TAG, "[CALL_FLOW] Emitting call-user -> " + targetUid);
             socket.emit("call-user", p);
-            Log.i(TAG, "emitted call-user -> " + targetUid);
-        } catch (JSONException e) { Log.e(TAG, "callUser json error", e); }
+        } catch (JSONException e) { Log.e(TAG, "[CALL_FLOW] callUser json error", e); }
     }
 
     public void acceptCall(String callId) {
@@ -122,9 +171,9 @@ public class SignalingRepository {
             p.put("callId", callId);
             String from = FirebaseAuth.getInstance().getCurrentUser() == null ? "" : FirebaseAuth.getInstance().getCurrentUser().getUid();
             p.put("from", from);
+            Log.i(TAG, "[CALL_FLOW] Emitting call-accepted for " + callId);
             socket.emit("call-accepted", p);
-            Log.i(TAG, "emitted call-accepted for " + callId);
-        } catch (JSONException e) { Log.e(TAG, "acceptCall json error", e); }
+        } catch (JSONException e) { Log.e(TAG, "[CALL_FLOW] acceptCall json error", e); }
     }
 
     public void rejectCall(String callId) {
@@ -132,9 +181,9 @@ public class SignalingRepository {
             JSONObject p = new JSONObject();
             p.put("callId", callId);
             p.put("from", FirebaseAuth.getInstance().getCurrentUser() == null ? "" : FirebaseAuth.getInstance().getCurrentUser().getUid());
+            Log.i(TAG, "[CALL_FLOW] Emitting call-rejected for " + callId);
             socket.emit("call-rejected", p);
-            Log.i(TAG, "emitted call-rejected for " + callId);
-        } catch (JSONException e) { Log.e(TAG, "rejectCall json error", e); }
+        } catch (JSONException e) { Log.e(TAG, "[CALL_FLOW] rejectCall json error", e); }
     }
 
     public void endCall(String callId) {
@@ -142,10 +191,11 @@ public class SignalingRepository {
             JSONObject p = new JSONObject();
             p.put("callId", callId);
             p.put("from", FirebaseAuth.getInstance().getCurrentUser() == null ? "" : FirebaseAuth.getInstance().getCurrentUser().getUid());
+            Log.i(TAG, "[CALL_FLOW] Emitting call-ended for " + callId);
             socket.emit("call-ended", p);
-            Log.i(TAG, "emitted call-ended for " + callId);
-        } catch (JSONException e) { Log.e(TAG, "endCall json error", e); }
+        } catch (JSONException e) { Log.e(TAG, "[CALL_FLOW] endCall json error", e); }
     }
+
 }
 
 

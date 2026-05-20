@@ -40,7 +40,7 @@ public class SocketManager {
 
     public synchronized void init(String url) {
         if (url == null) throw new IllegalArgumentException("url required");
-        if (serverUrl != null && serverUrl.equals(url)) return;
+        if (serverUrl != null && serverUrl.equals(url) && socket != null) return;
         serverUrl = url;
         if (socket != null) {
             try { socket.disconnect(); } catch (Exception ignored) {}
@@ -51,11 +51,10 @@ public class SocketManager {
             opts.reconnection = true;
             opts.reconnectionAttempts = Integer.MAX_VALUE;
             opts.forceNew = true;
-            // Use only WebSocket transport (no polling which can fail silently)
-            opts.transports = new String[]{"websocket"};
-            Log.i(TAG, "Initializing socket to: " + url);
+            Log.i(TAG, "[SOCKET] Initializing socket to: " + url);
             socket = IO.socket(serverUrl, opts);
             attachCoreListeners();
+            reattachListeners();
             // Add an AuthStateListener so we register when the user signs in later
             try {
                 if (authStateListener != null) {
@@ -64,14 +63,24 @@ public class SocketManager {
                 }
                 authStateListener = firebaseAuth -> {
                     if (firebaseAuth.getCurrentUser() != null) {
-                        // If socket is connected, emit register immediately; otherwise it will register on connect
-                        try { registerCurrentUser(); } catch (Exception e) { Log.e(TAG, "auth register failed", e); }
+                        try { registerCurrentUser(); } catch (Exception e) { Log.e(TAG, "[SOCKET] auth register failed", e); }
                     }
                 };
                 FirebaseAuth.getInstance().addAuthStateListener(authStateListener);
-            } catch (Exception e) { Log.w(TAG, "could not attach auth listener", e); }
+            } catch (Exception e) { Log.w(TAG, "[SOCKET] could not attach auth listener", e); }
         } catch (URISyntaxException e) {
-            Log.e(TAG, "✗ Invalid socket URL: " + url, e);
+            Log.e(TAG, "[SOCKET] ✗ Invalid socket URL: " + url, e);
+        }
+    }
+
+    private void reattachListeners() {
+        if (socket == null) return;
+        synchronized (listeners) {
+            for (Map.Entry<String, Emitter.Listener> entry : listeners.entrySet()) {
+                Log.i(TAG, "[SOCKET] Re-attaching listener for event: " + entry.getKey());
+                socket.off(entry.getKey());
+                socket.on(entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -88,24 +97,31 @@ public class SocketManager {
         socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                Log.i(TAG, "✓ Socket connected | socketId: " + socket.id());
-                // register authenticated user
+                Log.i(TAG, "[SOCKET] ✓ Socket connected | socketId: " + socket.id());
                 try {
                     if (FirebaseAuth.getInstance().getCurrentUser() != null) {
                         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
                         JSONObject payload = new JSONObject();
                         payload.put("uid", uid);
                         socket.emit("register", payload);
-                        Log.i(TAG, "✓ Emitted register event for uid: " + uid);
+                        Log.i(TAG, "[SOCKET] ✓ Emitted register event for uid: " + uid);
                     }
-                } catch (Exception e) { Log.e(TAG, "register emit failed", e); }
+                } catch (Exception e) { Log.e(TAG, "[SOCKET] register emit failed", e); }
             }
         });
 
         socket.on(Socket.EVENT_DISCONNECT, new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                Log.i(TAG, "✗ Socket disconnected");
+                Log.i(TAG, "[SOCKET] ✗ Socket disconnected");
+            }
+        });
+
+        socket.on("reconnect", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                Log.i(TAG, "[SOCKET] ✓ Socket reconnected");
+                try { registerCurrentUser(); } catch (Exception e) { Log.e(TAG, "[SOCKET] auth register failed on reconnect", e); }
             }
         });
 
@@ -113,18 +129,15 @@ public class SocketManager {
             @Override
             public void call(Object... args) {
                 String error = args != null && args.length > 0 ? args[0].toString() : "unknown";
-                Log.e(TAG, "✗ Connect error to: " + serverUrl);
-                Log.e(TAG, "✗ Error details: " + error);
-                if (args != null && args.length > 0 && args[0] instanceof Exception) {
-                    ((Exception) args[0]).printStackTrace();
-                }
+                Log.e(TAG, "[SOCKET] ✗ Connect error to: " + serverUrl);
+                Log.e(TAG, "[SOCKET] ✗ Error details: " + error);
             }
         });
 
         socket.on("register-ack", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                Log.i(TAG, "✓ Register acknowledged by server");
+                Log.i(TAG, "[SOCKET] ✓ Register acknowledged by server");
             }
         });
     }
@@ -134,23 +147,26 @@ public class SocketManager {
      */
     public synchronized void registerCurrentUser() {
         try {
-            if (socket == null) throw new IllegalStateException("SocketManager not initialized");
+            if (socket == null) {
+                Log.w(TAG, "[SOCKET] registerCurrentUser: socket not initialized");
+                return;
+            }
             if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-                Log.w(TAG, "registerCurrentUser: no authenticated user");
+                Log.w(TAG, "[SOCKET] registerCurrentUser: no authenticated user");
                 return;
             }
             String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
             JSONObject payload = new JSONObject();
             payload.put("uid", uid);
             socket.emit("register", payload);
-            Log.i(TAG, "✓ Emitted register event (manual) for uid: " + uid);
+            Log.i(TAG, "[SOCKET] ✓ Emitted register event (manual) for uid: " + uid);
         } catch (Exception e) {
-            Log.e(TAG, "registerCurrentUser error", e);
+            Log.e(TAG, "[SOCKET] registerCurrentUser error", e);
         }
     }
 
     public synchronized void connect() {
-        if (socket == null) throw new IllegalStateException("SocketManager not initialized");
+        if (socket == null) return;
         if (!socket.connected()) socket.connect();
     }
 
@@ -161,21 +177,34 @@ public class SocketManager {
     }
 
     public synchronized void emit(String event, JSONObject payload) {
-        if (socket == null) throw new IllegalStateException("SocketManager not initialized");
+        if (socket == null) {
+            Log.w(TAG, "[SOCKET] Cannot emit " + event + ", socket is null");
+            return;
+        }
+        Log.i(TAG, "[SOCKET] Emitting event: " + event);
         socket.emit(event, payload);
     }
 
     public synchronized void on(String event, Emitter.Listener listener) {
-        if (socket == null) throw new IllegalStateException("SocketManager not initialized");
+        if (socket == null) {
+            Log.w(TAG, "[SOCKET] Cannot register listener for " + event + ", socket is null. Storing for later.");
+            listeners.put(event, listener);
+            return;
+        }
+        // Ensure only one listener per event type exists
+        socket.off(event);
         listeners.put(event, listener);
         socket.on(event, listener);
+        Log.i(TAG, "[SOCKET] Registered listener for event: " + event);
     }
 
     public synchronized void off(String event) {
+        listeners.remove(event);
         if (socket == null) return;
-        Emitter.Listener l = listeners.remove(event);
-        if (l != null) socket.off(event, l);
+        socket.off(event);
+        Log.i(TAG, "[SOCKET] Unregistered listener for event: " + event);
     }
+
 }
 
 

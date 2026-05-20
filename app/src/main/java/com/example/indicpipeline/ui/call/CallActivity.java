@@ -3,101 +3,120 @@ package com.example.indicpipeline.ui.call;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.indicpipeline.R;
 import com.example.indicpipeline.call.CallConfig;
 import com.example.indicpipeline.call.livekit.CallSessionManager;
-import com.example.indicpipeline.call.livekit.LiveKitManager;
+import com.example.indicpipeline.call.manager.CallManager;
 import com.example.indicpipeline.call.signaling.SignalingRepository;
 import com.example.indicpipeline.call.state.CallStateManager;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.Locale;
+
 /**
- * Active call screen: displays call UI and manages audio connection via CallSessionManager.
+ * Active call screen.
  *
  * Responsibilities:
- * - Display call status and remote participant info
- * - Manage CallSessionManager lifecycle (create, connect, disconnect)
- * - Wire up mute/speaker button clicks
- * - Handle permissions
- * - Observe call state changes from CallSessionManager
- * - Clean up on end call or disconnect
+ * - Render UI strictly from CallStateManager
+ * - Connect LiveKit when permissions are ready
+ * - Stop all audio/timers when call ends
+ * - Back press only backgrounds the app; explicit End button ends the call
  */
 public class CallActivity extends AppCompatActivity {
     private static final String TAG = "CallActivity";
     private static final int RECORD_AUDIO_PERMISSION_CODE = 123;
 
-    // UI elements
-    private TextView tvRoom, tvStatus, tvRemoteParticipant;
+    private TextView tvRoom, tvStatus, tvDuration, tvRemoteParticipant;
     private Button btnMute, btnSpeaker, btnEnd;
 
-    // Intent data
     private String callId, roomId, token;
-    private boolean isCaller;
-
-    // LiveKit session
     private CallSessionManager sessionManager;
-    private SignalingRepository signaling = SignalingRepository.getInstance();
+    private final CallManager callManager = CallManager.getInstance();
+    private final SignalingRepository signaling = SignalingRepository.getInstance();
+
+    private final Handler timerHandler = new Handler(Looper.getMainLooper());
+    private long connectedAtMs = 0L;
+    private boolean terminalDismissScheduled = false;
+    private final Runnable timerTick = new Runnable() {
+        @Override
+        public void run() {
+            if (connectedAtMs <= 0L || tvDuration == null) return;
+            long elapsed = SystemClock.elapsedRealtime() - connectedAtMs;
+            tvDuration.setText(formatDuration(elapsed));
+            timerHandler.postDelayed(this, 1000L);
+        }
+    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_call);
 
-        // Get intent data
         callId = getIntent().getStringExtra("callId");
         roomId = getIntent().getStringExtra("roomId");
         token = getIntent().getStringExtra("livekitToken");
-        isCaller = getIntent().getBooleanExtra("isCaller", false);
 
-        Log.i(TAG, "Creating CallActivity: roomId=" + roomId + " isCaller=" + isCaller);
+        Log.i(TAG, "Creating CallActivity: callId=" + callId + " roomId=" + roomId);
 
-        // Initialize UI
         tvRoom = findViewById(R.id.tvCallRoom);
         tvStatus = findViewById(R.id.tvCallStatus);
+        tvDuration = findViewById(R.id.tvCallDuration);
         tvRemoteParticipant = findViewById(R.id.tvRemoteParticipantName);
         btnMute = findViewById(R.id.btnMute);
         btnSpeaker = findViewById(R.id.btnSpeaker);
         btnEnd = findViewById(R.id.btnEndCall);
 
         tvRoom.setText("Room: " + (roomId == null ? "-" : roomId));
-        tvStatus.setText("Connecting...");
+        tvDuration.setText("00:00");
 
-        // Set button initial states (not selected)
-        btnMute.setSelected(false); // initially unmuted
-        btnSpeaker.setSelected(true); // initially speaker on
+        CallStateManager.getInstance().getState().observe(this, this::renderState);
+        signaling.getCallEnded().observe(this, callEvent -> {
+            if (callEvent == null || callEvent.callId == null) return;
+            if (callId != null && !callId.equals(callEvent.callId)) return;
+            Log.i(TAG, "[CALL_FLOW] Received remote call-ended for callId=" + callEvent.callId);
+            callManager.handleRemoteEnded(callEvent.callId);
+        });
 
-        // Mute button: toggle mute state with visual feedback
+        btnMute.setSelected(false);
+        btnSpeaker.setSelected(true);
+
         btnMute.setOnClickListener(v -> {
             if (sessionManager != null) {
+                Log.i(TAG, "[CALL_FLOW] Mute button clicked");
                 sessionManager.toggleMute();
                 updateMuteButton();
             }
         });
 
-        // Speaker button: toggle speaker state with visual feedback
         btnSpeaker.setOnClickListener(v -> {
             if (sessionManager != null) {
+                Log.i(TAG, "[CALL_FLOW] Speaker button clicked");
                 sessionManager.toggleSpeaker();
                 updateSpeakerButton();
             }
         });
 
-        // End call button: disconnect and finish
         btnEnd.setOnClickListener(v -> {
-            Log.i(TAG, "End call button clicked");
-            endCall();
+            Log.i(TAG, "[CALL_FLOW] End call button clicked");
+            callManager.endCall();
+            finish();
         });
 
-        // Check and request RECORD_AUDIO permission
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -106,64 +125,60 @@ public class CallActivity extends AppCompatActivity {
                         new String[]{android.Manifest.permission.RECORD_AUDIO},
                         RECORD_AUDIO_PERMISSION_CODE);
             } else {
-                // Permission already granted, start the call
                 startCallSession();
             }
         } else {
-            // API < 23, assume permission granted
             startCallSession();
         }
+
+        renderState(callManager.getCurrentState());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                Log.i(TAG, "Back pressed - moving app to background WITHOUT ending call.");
+                moveTaskToBack(true);
+            }
+        });
     }
 
-    /**
-     * Initialize and connect CallSessionManager to LiveKit.
-     */
     private void startCallSession() {
         Log.i(TAG, "Starting call session");
 
         if (roomId == null || token == null) {
-            Log.e(TAG, "✗ Missing roomId or token");
+            Log.e(TAG, "Missing roomId or token");
             tvStatus.setText("Error: missing call parameters");
             return;
         }
 
-        // Create session manager
         sessionManager = new CallSessionManager(this);
 
-        // Observe connection state
         sessionManager.getIsConnected().observe(this, isConnected -> {
-            Log.i(TAG, "Room connection state: " + isConnected);
-            tvStatus.setText(isConnected ? "Connected" : "Disconnected");
-            if (isConnected) {
+            Log.i(TAG, "LiveKit connected=" + isConnected);
+            if (Boolean.TRUE.equals(isConnected)) {
+                callManager.setConnected();
                 updateMuteButton();
                 updateSpeakerButton();
             }
         });
 
-        // Observe remote participant connection
-        sessionManager.getIsRemoteParticipantConnected().observe(this, isConnected -> {
-            Log.i(TAG, "Remote participant connection state: " + isConnected);
-        });
+        sessionManager.getIsRemoteParticipantConnected().observe(this, isConnected ->
+                Log.i(TAG, "Remote participant connected=" + isConnected));
 
-        // Observe remote participant name
-        sessionManager.getRemoteParticipantName().observe(this, name -> {
-            tvRemoteParticipant.setText(name == null ? "Waiting..." : name);
-        });
+        sessionManager.getRemoteParticipantName().observe(this, name ->
+                Log.i(TAG, "Remote participant name=" + name));
 
-        // Observe connection errors
         sessionManager.getConnectionError().observe(this, error -> {
             if (error != null) {
                 Log.e(TAG, "Connection error: " + error);
-                tvStatus.setText("Error: " + error);
+                tvStatus.setText("Connection error");
             }
         });
 
-        // Connect to LiveKit room (on background thread)
         new Thread(() -> {
-            String userIdentity = FirebaseAuth.getInstance().getCurrentUser() == null ?
-                    "unknown" : FirebaseAuth.getInstance().getCurrentUser().getUid();
-
-            // Use configured LiveKit URL from CallConfig
+            String userIdentity = FirebaseAuth.getInstance().getCurrentUser() == null
+                    ? "unknown"
+                    : FirebaseAuth.getInstance().getCurrentUser().getUid();
             String liveKitUrl = CallConfig.LIVEKIT_URL;
 
             Log.i(TAG, "Connecting to LiveKit: url=" + liveKitUrl + " room=" + roomId + " identity=" + userIdentity);
@@ -179,42 +194,77 @@ public class CallActivity extends AppCompatActivity {
 
         if (requestCode == RECORD_AUDIO_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.i(TAG, "✓ RECORD_AUDIO permission granted");
+                Log.i(TAG, "RECORD_AUDIO permission granted");
                 startCallSession();
             } else {
-                Log.w(TAG, "✗ RECORD_AUDIO permission denied");
+                Log.w(TAG, "RECORD_AUDIO permission denied");
                 tvStatus.setText("Microphone permission required");
             }
         }
     }
 
-    /**
-     * End the call and cleanup resources.
-     */
-    private void endCall() {
-        Log.i(TAG, "Ending call");
+    private void renderState(CallStateManager.CallState state) {
+        if (state == null) state = CallStateManager.CallState.IDLE;
+        Log.i(TAG, "Render state: " + state);
 
-        // Tell signaling backend to end the call
-        if (callId != null && !callId.isEmpty()) {
-            signaling.endCall(callId);
+        switch (state) {
+            case CALLING:
+                terminalDismissScheduled = false;
+                tvStatus.setText("Calling...");
+                tvRemoteParticipant.setText("");
+                tvDuration.setText("00:00");
+                stopTimer();
+                break;
+            case RINGING:
+                terminalDismissScheduled = false;
+                tvStatus.setText("Incoming Call");
+                tvRemoteParticipant.setText("");
+                tvDuration.setText("00:00");
+                stopTimer();
+                break;
+            case CONNECTING:
+                terminalDismissScheduled = false;
+                tvStatus.setText("Connecting...");
+                tvRemoteParticipant.setText("");
+                tvDuration.setText("00:00");
+                stopTimer();
+                break;
+            case CONNECTED:
+                terminalDismissScheduled = false;
+                tvStatus.setText("Connected");
+                tvRemoteParticipant.setText(callManager.getPeerName() == null ? "" : callManager.getPeerName());
+                startTimer();
+                break;
+            case REJECTED:
+                tvStatus.setText("Call declined");
+                tvRemoteParticipant.setText("");
+                tvDuration.setText("00:00");
+                stopTimer();
+                scheduleTerminalDismiss();
+                break;
+            case MISSED:
+                tvStatus.setText("Missed call");
+                tvRemoteParticipant.setText("");
+                tvDuration.setText("00:00");
+                stopTimer();
+                scheduleTerminalDismiss();
+                break;
+            case ENDED:
+                tvStatus.setText("Call ended");
+                tvRemoteParticipant.setText("");
+                stopTimer();
+                scheduleTerminalDismiss();
+                break;
+            case IDLE:
+            default:
+                tvStatus.setText("Calling...");
+                tvRemoteParticipant.setText("");
+                tvDuration.setText("00:00");
+                stopTimer();
+                break;
         }
-
-        // Disconnect LiveKit session
-        if (sessionManager != null) {
-            sessionManager.disconnect();
-            sessionManager.cleanup();
-        }
-
-        // Update call state
-        CallStateManager.getInstance().setState(CallStateManager.CallState.ENDED);
-
-        // Close activity
-        finish();
     }
 
-    /**
-     * Update mute button visual state.
-     */
     private void updateMuteButton() {
         boolean muted = sessionManager != null && sessionManager.isMuted();
         btnMute.setSelected(muted);
@@ -223,9 +273,6 @@ public class CallActivity extends AppCompatActivity {
         Log.i(TAG, "Mute: " + (muted ? "ON" : "OFF"));
     }
 
-    /**
-     * Update speaker button visual state.
-     */
     private void updateSpeakerButton() {
         boolean speakerOn = sessionManager != null && sessionManager.isSpeakerOn();
         btnSpeaker.setSelected(speakerOn);
@@ -234,21 +281,41 @@ public class CallActivity extends AppCompatActivity {
         Log.i(TAG, "Speaker: " + (speakerOn ? "ON" : "OFF"));
     }
 
-    @Override
-    public void onBackPressed() {
-        Log.i(TAG, "Back pressed - ending call");
-        endCall();
+    private void startTimer() {
+        if (connectedAtMs > 0L) return;
+        connectedAtMs = SystemClock.elapsedRealtime();
+        timerHandler.removeCallbacks(timerTick);
+        timerHandler.post(timerTick);
+    }
+
+    private void stopTimer() {
+        connectedAtMs = 0L;
+        timerHandler.removeCallbacks(timerTick);
+    }
+
+    private void scheduleTerminalDismiss() {
+        if (terminalDismissScheduled) return;
+        terminalDismissScheduled = true;
+        timerHandler.postDelayed(() -> {
+            callManager.resetToIdleAfterUiDismiss();
+            finish();
+        }, 1200L);
+    }
+
+    private String formatDuration(long elapsedMs) {
+        long totalSeconds = elapsedMs / 1000L;
+        long minutes = totalSeconds / 60L;
+        long seconds = totalSeconds % 60L;
+        return String.format(Locale.US, "%02d:%02d", minutes, seconds);
     }
 
     @Override
     protected void onDestroy() {
-        Log.i(TAG, "CallActivity onDestroy");
-
-        // Cleanup session
+        Log.i(TAG, "CallActivity onDestroy - leaving call state untouched");
         if (sessionManager != null) {
             sessionManager.cleanup();
         }
-
+        stopTimer();
         super.onDestroy();
     }
 }

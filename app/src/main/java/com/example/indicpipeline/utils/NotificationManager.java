@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.os.Build;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -27,7 +29,15 @@ public class NotificationManager {
 
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
-            // Enable sound for incoming calls
+
+            // Set sound for incoming calls
+            Uri soundUri = android.provider.Settings.System.DEFAULT_RINGTONE_URI;
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .build();
+            channel.setSound(soundUri, audioAttributes);
+
+            // Enable vibration
             channel.enableVibration(true);
             channel.setShowBadge(true);
 
@@ -39,7 +49,7 @@ public class NotificationManager {
         }
     }
 
-    public static void showIncomingCallNotification(Context context, String fromName, String callId) {
+    public static void showIncomingCallNotification(Context context, String fromName, String callId, String fromUid, String roomId) {
         // On Android 13+ ensure we have POST_NOTIFICATIONS permission before showing notification
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
@@ -57,6 +67,8 @@ public class NotificationManager {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra("callId", callId);
         intent.putExtra("fromName", fromName);
+        intent.putExtra("fromUid", fromUid);
+        intent.putExtra("roomId", roomId);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -74,7 +86,6 @@ public class NotificationManager {
                 .setAutoCancel(false)
                 .setOngoing(true)
                 .setVibrate(new long[]{0, 500, 250, 500})
-                .setSound(android.provider.Settings.System.DEFAULT_RINGTONE_URI)
                 .setContentIntent(fullScreenPendingIntent);
 
         android.app.NotificationManager notificationManager =

@@ -1,5 +1,7 @@
 package com.example.indicpipeline.call.state;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -7,10 +9,13 @@ import androidx.lifecycle.MutableLiveData;
  * Centralized call state manager. Exposes LiveData for UI/ViewModels to observe.
  */
 public class CallStateManager {
+    private static final String TAG = "CallStateManager";
+
     public enum CallState {
         IDLE,
         CALLING,
         RINGING,
+        CONNECTING,
         CONNECTED,
         REJECTED,
         ENDED,
@@ -29,6 +34,14 @@ public class CallStateManager {
 
     public LiveData<CallState> getState() { return state; }
 
-    public void setState(CallState s) { state.postValue(s); }
+    public void setState(CallState s) {
+        CallState current = state.getValue();
+        if (current == s) {
+            Log.i(TAG, "State unchanged: " + s);
+            return;
+        }
+        Log.i(TAG, "Transition: " + (current == null ? "null" : current.name()) + " -> " + s);
+        state.postValue(s);
+    }
 }
 
