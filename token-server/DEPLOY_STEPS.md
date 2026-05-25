@@ -31,7 +31,7 @@ chmod 600 .env
 ```bash
 docker run -d \
   --name voice_translation_signaling_server \
-  --env-file /srv/ai-services/voice_to_voice_translation_app/token-server/.env \
+  --env-file file_path of .env file \
   -p 3000:3000 \
   --restart unless-stopped \
   voice-translation-signaling-server:latest
