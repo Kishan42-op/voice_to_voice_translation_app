@@ -222,4 +222,14 @@ public class OfflineTranslator {
         }
         return bestIdx;
     }
-}
+
+    public void close() {
+        try {
+            if (encoderSession != null) encoderSession.close();
+            if (decoderSession != null) decoderSession.close();
+            if (lmHeadSession != null) lmHeadSession.close();
+        } catch (Exception e) {
+            Log.e("OfflineTranslator", "Error closing OrtSessions", e);
+        }
+    }
+    }

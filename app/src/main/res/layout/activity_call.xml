@@ -1,71 +1,214 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/app_background">
 
-    <TextView
-        android:id="@+id/tvCallRoom"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Room: -"
-        android:textSize="18sp"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/tvCallStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Connecting..."
-        android:textSize="16sp"
-        android:textColor="#666666"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/tvCallDuration"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="00:00"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#444444"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/tvRemoteParticipantName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Waiting..."
-        android:textSize="16sp"
-        android:textColor="#666666"
-        android:layout_marginBottom="24dp" />
-
+    <!-- Top Section: Participant Info & Status -->
     <LinearLayout
+        android:id="@+id/layoutTopInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
 
-        <Button
-            android:id="@+id/btnMute"
+        <TextView
+            android:id="@+id/tvRemoteParticipantName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Mute" />
+            android:text="Participant Name"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/app_on_background" />
 
-        <Button
-            android:id="@+id/btnSpeaker"
+        <TextView
+            android:id="@+id/tvRemoteParticipantLanguage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Speaker"
-            android:layout_marginLeft="16dp" />
+            android:text="Waiting for peer..."
+            android:textSize="14sp"
+            android:textColor="@color/app_on_surface_variant"
+            android:layout_marginTop="4dp" />
 
-        <Button
-            android:id="@+id/btnEndCall"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="End"
-            android:layout_marginLeft="16dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvCallStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connected"
+                android:textSize="14sp"
+                android:textColor="@color/status_success"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="4dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="@color/app_outline" />
+
+            <TextView
+                android:id="@+id/tvCallDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00"
+                android:textSize="14sp"
+                android:textColor="@color/app_on_surface_variant" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvCallRoom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Room: -"
+            android:textSize="12sp"
+            android:textColor="@color/app_outline"
+            android:layout_marginTop="8dp" />
     </LinearLayout>
 
-</LinearLayout>
+    <!-- Middle Section: Realtime Translation/Transcription Area -->
+    <ScrollView
+        android:id="@+id/scrollTranslationArea"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/layoutBottomControls"
+        android:layout_below="@id/layoutTopInfo"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginVertical="8dp"
+        android:fadeScrollbars="false">
+
+        <LinearLayout
+            android:id="@+id/layoutTranscript"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="16dp">
+
+            <!-- Local spoken text -->
+            <LinearLayout
+                android:id="@+id/layoutLocalSpeech"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="You said:"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_primary" />
+                <TextView
+                    android:id="@+id/tvLocalSpokenText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="..."
+                    android:textSize="16sp"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginTop="2dp" />
+                <TextView
+                    android:id="@+id/tvLocalTranslatedText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="..."
+                    android:textSize="14sp"
+                    android:textStyle="italic"
+                    android:textColor="@color/app_on_surface_variant"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <!-- Remote received text -->
+            <LinearLayout
+                android:id="@+id/layoutRemoteSpeech"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Received:"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_theme_light_tertiary" />
+                <TextView
+                    android:id="@+id/tvRemoteTranslatedText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="..."
+                    android:textSize="16sp"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <!-- Placeholder for scrolling -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="40dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Section: Call Controls -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/layoutBottomControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/app_surface_variant">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMute"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Mute"
+                android:textAllCaps="false"
+                app:iconGravity="textStart" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSpeaker"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="8dp"
+                android:text="Speaker"
+                android:textAllCaps="false"
+                app:iconGravity="textStart" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEndCall"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="End"
+                android:textAllCaps="false"
+                app:backgroundTint="@color/app_error"
+                app:iconGravity="textStart" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</RelativeLayout>

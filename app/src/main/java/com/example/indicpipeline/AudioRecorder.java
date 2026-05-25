@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
@@ -23,8 +24,8 @@ public class AudioRecorder {
     private ChunkListener chunkListener;
 
     private static final int SR = 16000;
-    // Match Python: 1.0 second chunk = 16000 samples
-    private static final int CHUNK_SIZE_SAMPLES = 16000;
+    // 100ms chunks for better VAD responsiveness
+    private static final int CHUNK_SIZE_SAMPLES = 1600; 
 
     public AudioRecorder(Context ctx) {
         this.ctx = ctx.getApplicationContext();
@@ -35,18 +36,17 @@ public class AudioRecorder {
     }
 
     public void start() {
+        Log.i("AudioRecorder", "Starting AudioRecorder (100ms chunks)");
         if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             throw new SecurityException("RECORD_AUDIO permission not granted");
         }
 
         int minBuf = AudioRecord.getMinBufferSize(SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-
-        // Make buffer slightly larger than our chunk size to prevent overflow
-        int internalBuffSize = Math.max(minBuf, CHUNK_SIZE_SAMPLES * 2);
+        int internalBuffSize = Math.max(minBuf, CHUNK_SIZE_SAMPLES * 10);
 
         record = new AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                 SR,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -64,6 +64,16 @@ public class AudioRecorder {
                 int result = readFully(record, readBuffer, CHUNK_SIZE_SAMPLES);
 
                 if (result == CHUNK_SIZE_SAMPLES && running) {
+                    // Debug: Check if we are getting actual audio
+                    double rms = 0;
+                    for (short s : readBuffer) rms += s * s;
+                    rms = Math.sqrt(rms / CHUNK_SIZE_SAMPLES);
+                    if (rms > 0) {
+                        Log.v("AudioRecorder", "Chunk read success. RMS: " + (int)rms);
+                    } else {
+                        Log.w("AudioRecorder", "Chunk read SILENCE (RMS=0). Check mic access.");
+                    }
+
                     // Send a copy to the listener so we don't overwrite it while it's being processed
                     short[] chunkCopy = new short[CHUNK_SIZE_SAMPLES];
                     System.arraycopy(readBuffer, 0, chunkCopy, 0, CHUNK_SIZE_SAMPLES);

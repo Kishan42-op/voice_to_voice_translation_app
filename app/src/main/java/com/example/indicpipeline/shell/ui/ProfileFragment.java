@@ -2,6 +2,7 @@ package com.example.indicpipeline.shell.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,9 @@ import com.example.indicpipeline.auth.ui.AuthActivity;
 import com.example.indicpipeline.core.Resource;
 import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.shell.viewmodel.ProfileViewModel;
+import com.example.indicpipeline.models.GlobalModelManager;
+import com.example.indicpipeline.language.LanguageCatalog;
+import com.example.indicpipeline.LangConfig;
 import com.example.indicpipeline.utils.AvatarUtils;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
@@ -121,6 +125,19 @@ public class ProfileFragment extends Fragment {
             preferredLanguageView.setText(code != null && !code.trim().isEmpty()
                     ? user.getPreferredLanguage().getName() + " (" + code + ")"
                     : user.getPreferredLanguage().getName());
+
+            // Trigger global model preloading for the user's preferred language
+            LangConfig lang = LanguageCatalog.findByName(user.getPreferredLanguage().getName());
+            if (lang != null) {
+                GlobalModelManager gmm = GlobalModelManager.getInstance();
+                gmm.preloadLocalModels(requireContext().getApplicationContext(), lang);
+                gmm.getStatus().observe(getViewLifecycleOwner(), status -> {
+                    if (status != null && !status.equals("Idle")) {
+                        Log.i("ProfileFragment", "Model Status: " + status);
+                        // Optionally update a UI element here if we had one for AI status
+                    }
+                });
+            }
         } else {
             preferredLanguageView.setText(getString(R.string.shell_profile_language_missing));
         }

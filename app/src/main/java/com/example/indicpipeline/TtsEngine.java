@@ -35,6 +35,7 @@ public class TtsEngine {
 
         // TTS models moved under assets/tts/<lang>/
         String ttsBase = "tts/" + folderCode;
+        Log.i("TTS", "Loading TTS from: " + ttsBase);
 
         // Exactly matching your standalone app's vocab loading
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(context.getAssets().open(ttsBase + "/tokens.txt")))) {
@@ -56,19 +57,24 @@ public class TtsEngine {
             }
         }
 
-        File tempModelFile = new File(context.getCacheDir(), "tts_model.onnx");
-        try (InputStream is = context.getAssets().open(ttsBase + "/model.onnx");
-             FileOutputStream fos = new FileOutputStream(tempModelFile)) {
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = is.read(buffer)) != -1) {
-                fos.write(buffer, 0, read);
+        String modelName = "tts_model_" + folderCode + ".onnx";
+        File tempModelFile = new File(context.getCacheDir(), modelName);
+        if (!tempModelFile.exists()) {
+            Log.i("TTS", "Extracting TTS model to cache: " + modelName);
+            try (InputStream is = context.getAssets().open(ttsBase + "/model.onnx");
+                 FileOutputStream fos = new FileOutputStream(tempModelFile)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, read);
+                }
             }
         }
 
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT);
         session = env.createSession(tempModelFile.getAbsolutePath(), options);
+        Log.i("TTS", "TTS Session created for " + folderCode);
     }
 
     // CHANGED TO 'long' to return the processing time to MainActivity
@@ -230,6 +236,14 @@ public class TtsEngine {
         FloatBuffer floatBuffer = rawOutput.getFloatBuffer();
         float[] audioArray = new float[floatBuffer.remaining()];
         floatBuffer.get(audioArray);
+        Log.i("TTS", "Synthesized audio array length: " + audioArray.length + " floats");
+
+        // Debug: check for non-zero samples
+        float maxVal = 0f;
+        for (float f : audioArray) {
+            if (Math.abs(f) > maxVal) maxVal = Math.abs(f);
+        }
+        Log.i("TTS", "Synthesized audio Max Amplitude: " + maxVal);
 
         result.close();
         inputTensor.close(); lengthTensor.close(); noiseScale.close(); lengthScale.close(); noiseScaleW.close();

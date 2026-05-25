@@ -13,6 +13,8 @@ import com.example.indicpipeline.call.signaling.SignalingRepository;
 import com.example.indicpipeline.call.socket.SocketManager;
 import com.example.indicpipeline.utils.NotificationManager;
 
+import com.example.indicpipeline.models.GlobalModelManager;
+
 /**
  * Application entry: initialize socket manager and observe incoming calls.
  */
@@ -22,6 +24,11 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        
+        // Initialize Global Model Manager
+        GlobalModelManager.getInstance();
+        Log.i(TAG, "GlobalModelManager initialized");
+
         try {
             SocketManager.getInstance().init(CallConfig.SIGNALING_SERVER_URL);
             SocketManager.getInstance().connect();
