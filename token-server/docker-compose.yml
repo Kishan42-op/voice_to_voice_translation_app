@@ -1,0 +1,73 @@
+# ============================================
+# Docker Compose for Development & Production
+# Socket.IO Signaling Server
+# ============================================
+
+version: "3.9"
+
+services:
+  signaling-server:
+    # Image name and tag
+    image: voice-translation-signaling-server:latest
+    
+    # Container name for easy reference
+    container_name: signaling-server-prod
+    
+    # Build configuration
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    # Port mappings
+    # Format: "host_port:container_port"
+    ports:
+      - "3000:3000"
+    
+    # Environment variables (load from .env file)
+    env_file:
+      - .env
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    
+    # Restart policy
+    # always: Restart unless explicitly stopped
+    # on-failure: Restart only if exit code is non-zero
+    restart: always
+    
+    # Restart delay (wait before restarting)
+    # This prevents rapid restart loops
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Networking (optional: use host network for E2E Cloud)
+    # Uncomment if you need host network mode
+    # network_mode: "host"
+    
+    networks:
+      - signaling-network
+
+# Custom network for container communication
+networks:
+  signaling-network:
+    driver: bridge

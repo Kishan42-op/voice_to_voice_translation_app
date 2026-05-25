@@ -1,0 +1,51 @@
+# Version Control
+.git
+.gitignore
+
+# Node.js
+node_modules/
+npm-debug.log
+npm-error.log
+yarn-error.log
+yarn.lock
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+
+# IDE and Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build Artifacts
+build/
+dist/
+.next/
+out/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Development
+.env.development
+.env.test
+debug.log
