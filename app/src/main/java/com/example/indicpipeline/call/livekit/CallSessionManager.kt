@@ -14,22 +14,19 @@ import io.livekit.android.room.Room
 import io.livekit.android.room.participant.RemoteParticipant
 import io.livekit.android.room.track.RemoteAudioTrack
 import io.livekit.android.room.track.Track
+import io.livekit.android.room.track.DataPublishReliability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.nio.charset.StandardCharsets
+import android.util.Base64
 
 /**
  * Real LiveKit session manager for audio calls.
- *
- * Responsibilities:
- * - connect/disconnect room
- * - publish local mic
- * - observe participant/track events
- * - expose state to UI
- * - handle mute/speaker and cleanup
  */
 class CallSessionManager(private val context: Context) {
     companion object {
@@ -49,14 +46,137 @@ class CallSessionManager(private val context: Context) {
     private val connectionError = MutableLiveData<String?>(null)
     private val remoteParticipantName = MutableLiveData<String?>(null)
 
-    fun connect(liveKitUrl: String, roomName: String, token: String, localParticipantName: String) {
-        Log.i(TAG, "connect() liveKitUrl=$liveKitUrl room=$roomName identity=$localParticipantName")
-        Log.i(TAG, "Token length: ${token.length} chars")
+    // New LiveData for translation pipeline
+    private val remotePreferredLanguage = MutableLiveData<String?>(null)
+    private val incomingTranscription = MutableLiveData<String?>(null)
+    private val incomingTranslation = MutableLiveData<String?>(null)
 
+    interface AudioDataListener {
+        fun onAudioDataReceived(data: ByteArray)
+    }
+    private var audioDataListener: AudioDataListener? = null
+
+    fun setAudioDataListener(listener: AudioDataListener?) {
+        this.audioDataListener = listener
+    }
+
+    fun getIsConnected(): LiveData<Boolean> = isConnected
+    fun getIsRemoteParticipantConnected(): LiveData<Boolean> = isRemoteParticipantConnected
+    fun getConnectionError(): LiveData<String?> = connectionError
+    fun getRemoteParticipantName(): LiveData<String?> = remoteParticipantName
+
+    fun getRemotePreferredLanguage(): LiveData<String?> = remotePreferredLanguage
+    fun getIncomingTranscription(): LiveData<String?> = incomingTranscription
+    fun getIncomingTranslation(): LiveData<String?> = incomingTranslation
+
+    fun sendPreferredLanguage(langCode: String) {
+        publishData(JSONObject().put("type", "preferred_lang").put("code", langCode))
+    }
+
+    fun sendTranscription(text: String) {
+        publishData(JSONObject().put("type", "speech").put("text", text))
+    }
+
+    fun sendTranslation(text: String) {
+        publishData(JSONObject().put("type", "translation").put("text", text))
+    }
+
+    fun pushAudio(audio: ByteArray) {
+        // Fallback to Data Channel for stability in prototype
+        sendAudio(audio)
+    }
+
+    fun sendAudio(audio: ByteArray) {
+        val chunkSize = 16384 // 16KB chunks to stay safe with Data Channel limits
+        val totalSize = audio.size
+        var offset = 0
+        var chunkIndex = 0
+        val totalChunks = (totalSize + chunkSize - 1) / chunkSize
+
+        Log.i(TAG, "[PIPELINE] sending translated audio chunk: Total size ${audio.size} bytes. Splitting into $totalChunks chunks.")
+
+        while (offset < totalSize) {
+            val length = Math.min(chunkSize, totalSize - offset)
+            val chunk = ByteArray(length)
+            System.arraycopy(audio, offset, chunk, 0, length)
+            
+            val base64Audio = Base64.encodeToString(chunk, Base64.NO_WRAP)
+            Log.d(TAG, "[PIPELINE] Sending audio chunk ${chunkIndex + 1}/$totalChunks (${chunk.size} bytes)")
+            
+            publishData(JSONObject()
+                .put("type", "audio")
+                .put("data", base64Audio)
+                .put("index", chunkIndex)
+                .put("total", totalChunks)
+            )
+            
+            offset += length
+            chunkIndex++
+        }
+        Log.i(TAG, "[PIPELINE] All audio chunks sent.")
+    }
+
+    private fun publishData(json: JSONObject) {
+        val r = room ?: return
+        if (isConnected.value != true) {
+            Log.w(TAG, "[PIPELINE] Cannot publish data: Not connected")
+            return
+        }
+        scope.launch(Dispatchers.IO) {
+            try {
+                val data = json.toString().toByteArray(StandardCharsets.UTF_8)
+                r.localParticipant.publishData(data, DataPublishReliability.RELIABLE)
+                Log.d(TAG, "[PIPELINE] Data published to room: ${json.optString("type")} (${data.size} bytes)")
+            } catch (e: Exception) {
+                Log.e(TAG, "[PIPELINE] Failed to publish data: ${e.message}")
+            }
+        }
+    }
+
+    private fun handleData(data: ByteArray) {
+        try {
+            val json = JSONObject(String(data, StandardCharsets.UTF_8))
+            val type = json.optString("type")
+            Log.i(TAG, "[PIPELINE] Received data channel message: $type")
+            when (type) {
+                "preferred_lang" -> {
+                    val code = json.optString("code")
+                    Log.i(TAG, "[PIPELINE] Peer preferred language: $code")
+                    remotePreferredLanguage.postValue(code)
+                }
+                "speech" -> {
+                    val text = json.optString("text")
+                    Log.i(TAG, "[PIPELINE] Peer transcription: $text")
+                    incomingTranscription.postValue(text)
+                }
+                "translation" -> {
+                    val text = json.optString("text")
+                    Log.i(TAG, "[PIPELINE] Peer translation: $text")
+                    incomingTranslation.postValue(text)
+                }
+                "audio" -> {
+                    val base64Data = json.optString("data")
+                    val index = json.optInt("index", 0)
+                    val total = json.optInt("total", 1)
+                    val audioBytes = Base64.decode(base64Data, Base64.DEFAULT)
+                    Log.i(TAG, "[PIPELINE] peer audio chunk received: ${audioBytes.size} bytes (Chunk ${index + 1}/$total)")
+                    
+                    // Directly invoke listener on background thread to avoid LiveData/MainThread bottleneck
+                    audioDataListener?.onAudioDataReceived(audioBytes)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[PIPELINE] Failed to parse data: ${e.message}")
+        }
+    }
+
+    fun connect(liveKitUrl: String, roomName: String, token: String, localParticipantName: String) {
+        Log.i(TAG, "====================================================")
+        Log.i(TAG, "[VERSION_TAG] CALL_SESSION_MANAGER_V3_CONNECT")
+        Log.i(TAG, "====================================================")
+        
         if (liveKitUrl.isBlank() || roomName.isBlank() || token.isBlank()) {
-            val error = "Missing parameters: url=${liveKitUrl.isBlank()} room=${roomName.isBlank()} token=${token.isBlank()}"
-            Log.e(TAG, error)
-            connectionError.postValue(error)
+            connectionError.postValue("Missing parameters")
             isConnected.postValue(false)
             return
         }
@@ -70,22 +190,20 @@ class CallSessionManager(private val context: Context) {
                 attachRoomEventCollector(room!!)
                 applyAudioRoute(true)
 
-                Log.i(TAG, "✓ Room created, connecting to $liveKitUrl")
                 room?.connect(liveKitUrl, token, ConnectOptions())
-
                 Log.i(TAG, "✓ Connected to LiveKit room: $roomName")
                 isConnected.postValue(true)
                 connectionError.postValue(null)
 
-                // Make sure microphone is actually published.
-                room?.localParticipant?.setMicrophoneEnabled(true)
-                Log.i(TAG, "✓ Microphone enabled")
+                // For Translation Pipeline, we MUTE the standard microphone by default
+                // to avoid feedback and raw audio leakage.
+                room?.localParticipant?.setMicrophoneEnabled(false)
+                isMuted = true
+                Log.i(TAG, "✓ Standard mic muted (using Pipeline).")
             } catch (e: Exception) {
-                val msg = e.message ?: e.javaClass.simpleName
-                Log.e(TAG, "✗ Connection failed: $msg", e)
-                connectionError.postValue("Connection failed: $msg")
+                Log.e(TAG, "✗ Connection failed: ${e.message}", e)
+                connectionError.postValue("Connection failed: ${e.message}")
                 isConnected.postValue(false)
-                logCauseChain(e)
             }
         }
     }
@@ -96,82 +214,28 @@ class CallSessionManager(private val context: Context) {
             room.events.events.collect { event ->
                 when (event) {
                     is RoomEvent.Connected -> {
-                        Log.i(TAG, "✓ Room event: Connected")
-                    }
-
-                    is RoomEvent.Reconnecting -> {
-                        Log.w(TAG, "↻ Room event: Reconnecting")
-                    }
-
-                    is RoomEvent.Reconnected -> {
-                        Log.i(TAG, "✓ Room event: Reconnected")
                         isConnected.postValue(true)
                     }
-
                     is RoomEvent.Disconnected -> {
-                        Log.i(TAG, "✗ Room event: Disconnected")
                         isConnected.postValue(false)
                         isRemoteParticipantConnected.postValue(false)
                         remoteParticipantName.postValue(null)
                     }
-
-                    is RoomEvent.FailedToConnect -> {
-                        val msg = event.error.message ?: event.error.javaClass.simpleName
-                        Log.e(TAG, "✗ Room event: FailedToConnect - $msg", event.error)
-                        connectionError.postValue("Connection failed: $msg")
-                        isConnected.postValue(false)
-                    }
-
+                    is RoomEvent.DataReceived -> handleData(event.data)
                     is RoomEvent.ParticipantConnected -> {
                         val p = event.participant
-                        Log.i(TAG, "✓ Participant connected: ${p.name} (${p.identity})")
-                        remoteParticipantName.postValue(
-                            p.name?.toString()?.takeIf { it.isNotBlank() } ?: p.identity.toString()
-                        )
                         isRemoteParticipantConnected.postValue(true)
+                        remoteParticipantName.postValue(p.name?.takeIf { it.isNotBlank() } ?: p.identity?.value)
+                        Log.i(TAG, "Participant connected: ${p.identity?.value}")
                     }
-
-                    is RoomEvent.ParticipantDisconnected -> {
-                        val p = event.participant
-                        Log.i(TAG, "✗ Participant disconnected: ${p.name} (${p.identity})")
-                        isRemoteParticipantConnected.postValue(false)
-                        remoteParticipantName.postValue(null)
-                    }
-
                     is RoomEvent.TrackSubscribed -> {
-                        val participant = event.participant
-                        val track = event.track
-                        Log.i(TAG, "✓ Track subscribed: kind=${track.kind} participant=${participant.name}")
-                        if (track.kind == Track.Kind.AUDIO) {
-                            Log.i(TAG, "✓ Remote audio track subscribed from ${participant.name}")
-                            if (track is RemoteAudioTrack) {
-                                track.setVolume(1.0)
-                            }
-                            remoteParticipantName.postValue(
-                                participant.name?.toString()?.takeIf { it.isNotBlank() } ?: participant.identity.toString()
-                            )
+                        val p = event.participant
+                        if (event.track.kind == Track.Kind.AUDIO) {
                             isRemoteParticipantConnected.postValue(true)
+                            remoteParticipantName.postValue(p.name?.takeIf { it.isNotBlank() } ?: p.identity?.value)
+                            Log.i(TAG, "Audio track subscribed from: ${p.identity?.value}")
                         }
                     }
-
-                    is RoomEvent.TrackUnsubscribed -> {
-                        Log.i(TAG, "✗ Track unsubscribed from ${event.participant.name}")
-                    }
-
-                    is RoomEvent.TrackSubscriptionFailed -> {
-                        val msg = event.exception.message ?: event.exception.javaClass.simpleName
-                        Log.e(TAG, "✗ Track subscription failed: $msg", event.exception)
-                        connectionError.postValue("Track subscription failed: $msg")
-                    }
-
-                    is RoomEvent.TrackPublished -> {
-                        Log.i(TAG, "✓ Track published: ${event.participant.name}")
-                    }
-
-                    is RoomEvent.TrackUnpublished -> {
-                        Log.i(TAG, "✗ Track unpublished: ${event.participant.name}")
-                    }
-
                     else -> Unit
                 }
             }
@@ -180,14 +244,12 @@ class CallSessionManager(private val context: Context) {
 
     fun toggleMute() {
         isMuted = !isMuted
-        Log.i(TAG, "toggleMute: ${if (isMuted) "MUTED" else "UNMUTED"}")
-
         scope.launch {
             try {
                 room?.localParticipant?.setMicrophoneEnabled(!isMuted)
-                Log.i(TAG, "✓ Microphone ${if (isMuted) "disabled" else "enabled"}")
+                Log.i(TAG, "Mute toggled: $isMuted")
             } catch (e: Exception) {
-                Log.e(TAG, "Error setting microphone enabled: ${e.message}", e)
+                Log.e(TAG, "Error toggling mute", e)
             }
         }
     }
@@ -196,38 +258,25 @@ class CallSessionManager(private val context: Context) {
 
     fun toggleSpeaker() {
         isSpeakerOn = !isSpeakerOn
-        Log.i(TAG, "toggleSpeaker: ${if (isSpeakerOn) "ON (speaker)" else "OFF (earpiece)"}")
         applyAudioRoute(isSpeakerOn)
+        Log.i(TAG, "Speaker toggled: $isSpeakerOn")
     }
 
     fun isSpeakerOn(): Boolean = isSpeakerOn
 
-    fun disconnect() {
-        Log.i(TAG, "Disconnecting...")
-        scope.launch {
-            disconnectInternal(keepJob = true)
-        }
-    }
-
     fun cleanup() {
-        Log.i(TAG, "cleanup()")
+        Log.i(TAG, "Cleanup session")
         scope.launch {
             disconnectInternal(keepJob = false)
         }
     }
 
-    fun getIsConnected(): LiveData<Boolean> = isConnected
-    fun getIsRemoteParticipantConnected(): LiveData<Boolean> = isRemoteParticipantConnected
-    fun getConnectionError(): LiveData<String?> = connectionError
-    fun getRemoteParticipantName(): LiveData<String?> = remoteParticipantName
-
     private fun requestAudioFocus() {
         try {
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN)
-            Log.i(TAG, "✓ Audio focus requested")
         } catch (e: Exception) {
-            Log.w(TAG, "Audio focus request error: ${e.message}")
+            Log.w(TAG, "Audio focus request error")
         }
     }
 
@@ -235,9 +284,8 @@ class CallSessionManager(private val context: Context) {
         try {
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
             audioManager.isSpeakerphoneOn = speakerOn
-            Log.i(TAG, "✓ Audio route updated: speaker=$speakerOn")
         } catch (e: Exception) {
-            Log.w(TAG, "Audio route update failed: ${e.message}")
+            Log.w(TAG, "Audio route update error")
         }
     }
 
@@ -245,50 +293,21 @@ class CallSessionManager(private val context: Context) {
         try {
             eventJob?.cancel()
             eventJob = null
-
             room?.let {
-                try {
-                    it.localParticipant.setMicrophoneEnabled(false)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Error disabling microphone: ${e.message}")
-                }
                 it.disconnect()
                 it.release()
             }
             room = null
-
-            @Suppress("DEPRECATION")
-            audioManager.abandonAudioFocus(null)
-            audioManager.isSpeakerphoneOn = false
-            audioManager.mode = AudioManager.MODE_NORMAL
-
             isConnected.postValue(false)
             isRemoteParticipantConnected.postValue(false)
             remoteParticipantName.postValue(null)
-
-            Log.i(TAG, "✓ Disconnected")
+            Log.i(TAG, "✓ Disconnected internal")
         } catch (e: Exception) {
-            Log.e(TAG, "✗ Disconnect error: ${e.message}", e)
+            Log.e(TAG, "Disconnect error", e)
         } finally {
             if (!keepJob) {
                 job.cancel()
             }
         }
     }
-
-    private fun logCauseChain(e: Throwable) {
-        var cause = e.cause
-        var depth = 1
-        while (cause != null && depth < 5) {
-            Log.e(TAG, "  ✗ Caused by (level $depth): ${cause.message}")
-            cause = cause.cause
-            depth++
-        }
-    }
 }
-
-
-
-
-
-

@@ -244,4 +244,13 @@ public class AsrEngine {
         }
         return new LangPack(v, mask);
     }
+
+    public void close() {
+        try {
+            if (encoder != null) encoder.close();
+            if (ctcDecoder != null) ctcDecoder.close();
+        } catch (Exception e) {
+            Log.e(TAG, "Error closing OrtSessions", e);
+        }
+    }
 }

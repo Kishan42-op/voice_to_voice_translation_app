@@ -44,6 +44,7 @@ public class ProfileViewModel extends ViewModel {
             @Override
             public void onSuccess(User user) {
                 profileState.postValue(Resource.success(user));
+                // Model preloading will be triggered from the Fragment using the user's language
             }
 
             @Override
