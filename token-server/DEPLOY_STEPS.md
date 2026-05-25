@@ -27,30 +27,28 @@ nano .env
 chmod 600 .env
 ```
 
-## 5. Build
+## 5. Build and run
 ```bash
-docker build -t voice-translation-signaling-server:latest .
+docker run -d \
+  --name voice_translation_signaling_server \
+  --env-file /srv/ai-services/voice_to_voice_translation_app/token-server/.env \
+  -p 3000:3000 \
+  --restart unless-stopped \
+  voice-translation-signaling-server:latest
 ```
 
-## 6. Run
-```bash
-docker-compose up -d
-sleep 3
-docker ps | grep signaling-server
-```
-
-## 7. Test
+## 6. Test
 ```bash
 curl http://localhost:3000/health
 # Expected: {"ok":true}
 ```
 
-## 8. Open Port
+## 7. Open Port
 ```bash
 sudo ufw allow 3000/tcp
 ```
 
-## 9. Verify (External)
+## 8. Verify (External)
 ```bash
 curl http://YOUR-VM-IP:3000/health
 ```
