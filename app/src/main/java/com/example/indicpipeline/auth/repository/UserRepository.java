@@ -250,4 +250,30 @@ public class UserRepository {
         }
         return normalized;
     }
+
+    public void updatePreferredLanguage(String uid, PreferredLanguage preferredLanguage, AuthRepository.AuthResultCallback<User> callback) {
+        if (uid == null) {
+            callback.onError("User ID not found.");
+            return;
+        }
+
+        if (!LanguageCatalog.isSupported(preferredLanguage)) {
+            callback.onError("Please choose a supported preferred language.");
+            return;
+        }
+
+        DocumentReference userRef = firestore.collection("users").document(uid);
+        Map<String, Object> updateMap = new HashMap<>();
+        updateMap.put("preferredLanguage", preferredLanguage);
+
+        userRef.update(updateMap)
+                .addOnSuccessListener(aVoid -> {
+                    // Fetch updated user document
+                    getUserDocument(uid, callback);
+                })
+                .addOnFailureListener(exception -> {
+                    Log.e(TAG, "Failed to update preferred language for uid=" + uid, exception);
+                    callback.onError(AuthErrorMapper.map(exception));
+                });
+    }
 }

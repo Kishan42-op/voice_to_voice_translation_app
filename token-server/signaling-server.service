@@ -1,0 +1,47 @@
+[Unit]
+Description=Socket.IO Signaling Server (Docker)
+Documentation=file:///opt/signaling-server/DOCKER_DEPLOYMENT.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+WorkingDirectory=/opt/signaling-server
+
+# User context
+User=root
+Group=root
+
+# Pre-start checks
+ExecStartPre=/bin/sh -c 'docker pull voice-translation-signaling-server:latest || true'
+
+# Start command using docker-compose
+ExecStart=/usr/local/bin/docker-compose up
+
+# Stop command
+ExecStop=/usr/local/bin/docker-compose down
+
+# Reload command (for systemctl reload)
+ExecReload=/usr/local/bin/docker-compose restart
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=signaling-server
+
+# Resource limits
+MemoryLimit=1G
+CPUQuota=100%
+
+# Timeout settings
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+# Environment
+Environment="DOCKER_CLIENT_TIMEOUT=120"
+Environment="COMPOSE_HTTP_TIMEOUT=120"
+
+[Install]
+WantedBy=multi-user.target

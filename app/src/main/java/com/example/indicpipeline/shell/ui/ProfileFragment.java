@@ -23,7 +23,9 @@ import com.example.indicpipeline.language.LanguageCatalog;
 import com.example.indicpipeline.LangConfig;
 import com.example.indicpipeline.utils.AvatarUtils;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textview.MaterialTextView;
 
 public class ProfileFragment extends Fragment {
@@ -65,6 +67,7 @@ public class ProfileFragment extends Fragment {
         logoutButton = view.findViewById(R.id.btnProfileLogout);
 
         logoutButton.setOnClickListener(v -> performLogout());
+        preferredLanguageView.setOnClickListener(v -> showLanguageSelectionDialog());
 
         profileViewModel.getProfileState().observe(getViewLifecycleOwner(), state -> {
             if (state == null) {
@@ -92,6 +95,30 @@ public class ProfileFragment extends Fragment {
                 } else {
                     showError(getString(R.string.shell_profile_missing));
                 }
+            }
+        });
+
+        profileViewModel.getUpdateLanguageState().observe(getViewLifecycleOwner(), state -> {
+            if (state == null) {
+                return;
+            }
+
+            if (state.getStatus() == Resource.Status.LOADING) {
+                showLoading(true);
+                return;
+            }
+
+            if (state.getStatus() == Resource.Status.ERROR) {
+                showLoading(false);
+                Snackbar.make(scrollProfile, state.getMessage(), Snackbar.LENGTH_LONG).show();
+                profileViewModel.clearUpdateLanguageState();
+                return;
+            }
+
+            if (state.getStatus() == Resource.Status.SUCCESS) {
+                showLoading(false);
+                Snackbar.make(scrollProfile, "Language updated successfully!", Snackbar.LENGTH_SHORT).show();
+                profileViewModel.clearUpdateLanguageState();
             }
         });
 
@@ -134,7 +161,6 @@ public class ProfileFragment extends Fragment {
                 gmm.getStatus().observe(getViewLifecycleOwner(), status -> {
                     if (status != null && !status.equals("Idle")) {
                         Log.i("ProfileFragment", "Model Status: " + status);
-                        // Optionally update a UI element here if we had one for AI status
                     }
                 });
             }
@@ -144,20 +170,58 @@ public class ProfileFragment extends Fragment {
         scrollProfile.setVisibility(View.VISIBLE);
     }
 
+    private void showLanguageSelectionDialog() {
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_select_language, null);
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Select Preferred Language")
+                .setView(dialogView);
+
+        // Create language options
+        java.util.List<LangConfig> languages = LanguageCatalog.getSupportedLanguages();
+        String[] languageNames = new String[languages.size()];
+        for (int i = 0; i < languages.size(); i++) {
+            languageNames[i] = languages.get(i).name;
+        }
+
+        int selectedIndex = -1;
+        User currentUser = profileViewModel.getProfileState().getValue() != null ? 
+                profileViewModel.getProfileState().getValue().getData() : null;
+        if (currentUser != null && currentUser.getPreferredLanguage() != null) {
+            String currentLanguage = currentUser.getPreferredLanguage().getName();
+            for (int i = 0; i < languageNames.length; i++) {
+                if (languageNames[i].equals(currentLanguage)) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        builder.setSingleChoiceItems(languageNames, selectedIndex, (dialog, which) -> {
+            LangConfig selectedLanguage = languages.get(which);
+            com.example.indicpipeline.models.PreferredLanguage preferredLanguage = 
+                    LanguageCatalog.toPreferredLanguage(selectedLanguage);
+            profileViewModel.updatePreferredLanguage(preferredLanguage);
+            dialog.dismiss();
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
     private void showLoading(boolean loading) {
         progressIndicator.setVisibility(loading ? View.VISIBLE : View.GONE);
         scrollProfile.setVisibility(loading ? View.GONE : View.VISIBLE);
     }
 
     private void showError(String message) {
-        if (message == null || message.isEmpty()) {
+        if (message == null || message.trim().isEmpty()) {
             errorText.setVisibility(View.GONE);
-            errorText.setText(null);
-            return;
+        } else {
+            errorText.setText(message);
+            errorText.setVisibility(View.VISIBLE);
         }
-        errorText.setVisibility(View.VISIBLE);
-        errorText.setText(message);
-        scrollProfile.setVisibility(View.GONE);
     }
 
     private void performLogout() {
@@ -165,11 +229,8 @@ public class ProfileFragment extends Fragment {
     }
 
     private void navigateToAuth() {
-        Intent intent = new Intent(requireActivity(), AuthActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        Intent intent = new Intent(getActivity(), AuthActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
-        requireActivity().finishAffinity();
     }
 }
-
-

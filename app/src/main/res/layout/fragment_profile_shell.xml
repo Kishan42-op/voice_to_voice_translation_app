@@ -174,7 +174,11 @@
                         android:textAlignment="center"
                         android:textColor="@color/app_primary"
                         android:textSize="16sp"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="12dp"
+                        android:padding="12dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
