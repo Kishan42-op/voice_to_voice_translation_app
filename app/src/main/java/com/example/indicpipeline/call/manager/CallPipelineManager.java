@@ -31,7 +31,6 @@ public class CallPipelineManager {
     private AudioRecorder recorder;
     private AsrEngine asrEngine;
     private OfflineTranslator translator;
-    private TtsEngine ttsEngine;
     private OrtEnvironment sharedEnv;
     private final GlobalModelManager modelManager = GlobalModelManager.getInstance();
 
@@ -61,7 +60,6 @@ public class CallPipelineManager {
         void onReady();
         void onLocalTranscription(String text);
         void onLocalTranslation(String text);
-        void onTranslatedAudioReady(byte[] audioBytes);
         void onError(String message);
     }
 
@@ -96,8 +94,7 @@ public class CallPipelineManager {
                 if (listener != null) listener.onLoadingProgress("Warming Translator...");
                 translator = modelManager.getTranslator(context);
                 
-                if (listener != null) listener.onLoadingProgress("Warming TTS (" + remoteLang.name + ")...");
-                ttsEngine = modelManager.getTtsEngine(context, remoteLang.ttsFolder);
+                // No TTS needed - receiver will synthesize locally
 
                 recorder = new AudioRecorder(context);
                 
@@ -135,6 +132,29 @@ public class CallPipelineManager {
         Log.i(TAG, "[PIPELINE] Voice Pipeline Loop started.");
     }
 
+    public void setSpeaking(boolean speaking) {
+        isSpeaking = speaking;
+        if (speaking) {
+            audioQueue.clear();
+        }
+    }
+
+    private volatile boolean isMuted = false;
+
+    public void setMuted(boolean muted) {
+        this.isMuted = muted;
+        if (muted) {
+            Log.i(TAG, "[PIPELINE] Muted - clearing audio queue");
+            audioQueue.clear();
+        } else {
+            Log.i(TAG, "[PIPELINE] Unmuted - ready to process");
+        }
+    }
+
+    public void clearAudioQueue() {
+        audioQueue.clear();
+    }
+
     public void stop() {
         isRunning = false;
         if (recorder != null) recorder.stop();
@@ -155,7 +175,11 @@ public class CallPipelineManager {
             try {
                 short[] chunk = audioQueue.take();
                 chunksReceived++;
-                
+
+                if (isSpeaking || isMuted) {
+                    continue;
+                }
+
                 double rms = calculateRMS(chunk);
                 sessionMaxRms = Math.max(sessionMaxRms, rms);
 
@@ -250,49 +274,14 @@ public class CallPipelineManager {
             Log.i(TAG, "[TRANSLATE] Output (" + remoteLang.name + "): " + translated + " (took " + transTime + "ms)");
             if (listener != null) listener.onLocalTranslation(translated);
 
-            // 3. TRANSLITERATE (FOR TTS)
-            // Most TTS models expect romanized input (uroman)
-            Log.d(TAG, "[TTS] Transliterating to uroman...");
-            String uroman = IndicToUroman.transliterate(translated, remoteLang.transCode);
-            Log.i(TAG, "[TTS] Uroman text: " + uroman);
-
-            // 4. TTS
-            isSpeaking = true;
-            try {
-                long t2 = System.currentTimeMillis();
-                Log.i(TAG, "[TTS] synthesis started for: " + translated);
-                TtsEngine.TtsResult result = ttsEngine.synthesizeToFile(uroman);
-                long ttsTime = System.currentTimeMillis() - t2;
-                
-                if (result != null && result.audioData != null && result.audioData.length > 0) {
-                    byte[] audioBytes = floatToByte(result.audioData);
-                    Log.i(TAG, "[TTS] pcm bytes generated: " + audioBytes.length + " (took " + ttsTime + "ms)");
-                    
-                    // 5. SEND
-                    if (listener != null) {
-                        Log.i(TAG, "[PIPELINE] sending translated audio chunk (" + audioBytes.length + " bytes)");
-                        listener.onTranslatedAudioReady(audioBytes);
-                    }
-                } else {
-                    Log.e(TAG, "[TTS] FAILED: No audio generated for text: " + uroman);
-                }
-                
-                long totalTime = System.currentTimeMillis() - tStart;
-                Log.i(TAG, "[PIPELINE] End-to-end latency: " + totalTime + "ms");
-            } finally {
-                isSpeaking = false;
-            }
+            // Translation is sent via data channel; receiver does local TTS
+            // This is the correct architecture: text goes over network, audio is synthesized locally
 
         } catch (Exception e) {
             Log.e(TAG, "[PIPELINE] Utterance Error", e);
         }
     }
 
-    private byte[] floatToByte(float[] floatArray) {
-        byte[] byteArray = new byte[floatArray.length * 4];
-        java.nio.ByteBuffer.wrap(byteArray).order(java.nio.ByteOrder.LITTLE_ENDIAN).asFloatBuffer().put(floatArray);
-        return byteArray;
-    }
 
     private boolean isLikelyFalsePositive(String text) {
         return text.length() < 2 || text.equalsIgnoreCase("you") || text.equalsIgnoreCase("thank you");

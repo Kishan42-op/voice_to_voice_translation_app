@@ -17,6 +17,9 @@ import com.example.indicpipeline.call.manager.CallManager;
 import com.example.indicpipeline.call.signaling.CallEvent;
 import com.example.indicpipeline.call.signaling.SignalingRepository;
 import com.example.indicpipeline.call.state.CallStateManager;
+import com.example.indicpipeline.auth.repository.AuthRepository;
+import com.example.indicpipeline.auth.repository.UserRepository;
+import com.example.indicpipeline.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 
 /**
@@ -39,6 +42,7 @@ public class OutgoingCallActivity extends AppCompatActivity {
     private final SignalingRepository signaling = SignalingRepository.getInstance();
     private final LiveKitManager liveKitManager = new LiveKitManager();
     private final CallManager callManager = CallManager.getInstance();
+    private final UserRepository userRepository = new UserRepository();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -65,7 +69,7 @@ public class OutgoingCallActivity extends AppCompatActivity {
         });
 
         callManager.initOutgoingCall(targetUid, targetName);
-        signaling.callUser(targetUid, targetName);
+        sendOutgoingCallWithCallerName();
 
         signaling.getCallInitiated().observe(this, callEvent -> {
             if (callEvent == null) return;
@@ -143,6 +147,48 @@ public class OutgoingCallActivity extends AppCompatActivity {
 
 
         renderState(callManager.getCurrentState());
+    }
+
+    private void sendOutgoingCallWithCallerName() {
+        String currentUid = FirebaseAuth.getInstance().getCurrentUser() == null
+                ? null
+                : FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        if (currentUid == null || currentUid.trim().isEmpty()) {
+            android.util.Log.w(TAG, "[CALL_FLOW] Missing current user; using fallback caller name");
+            signaling.callUser(targetUid, targetName == null ? "Unknown" : targetName);
+            return;
+        }
+
+        userRepository.getUserDocument(currentUid, new AuthRepository.AuthResultCallback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                String callerName = user != null && user.getName() != null && !user.getName().trim().isEmpty()
+                        ? user.getName().trim()
+                        : FirebaseAuth.getInstance().getCurrentUser() != null
+                        ? FirebaseAuth.getInstance().getCurrentUser().getDisplayName()
+                        : null;
+
+                if (callerName == null || callerName.trim().isEmpty()) {
+                    callerName = currentUid;
+                }
+
+                android.util.Log.i(TAG, "[CALL_FLOW] Emitting call-user with callerName=" + callerName + " targetUid=" + targetUid);
+                signaling.callUser(targetUid, callerName);
+            }
+
+            @Override
+            public void onError(String message) {
+                android.util.Log.w(TAG, "[CALL_FLOW] Failed to load caller profile; using Firebase display name. reason=" + message);
+                String callerName = FirebaseAuth.getInstance().getCurrentUser() != null
+                        ? FirebaseAuth.getInstance().getCurrentUser().getDisplayName()
+                        : currentUid;
+                if (callerName == null || callerName.trim().isEmpty()) {
+                    callerName = currentUid;
+                }
+                signaling.callUser(targetUid, callerName);
+            }
+        });
     }
 
     private void renderState(CallStateManager.CallState state) {
