@@ -1,6 +1,7 @@
 package com.example.indicpipeline.ui.call;
 
 import android.content.pm.PackageManager;
+// ...existing imports...
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,9 +12,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.media.AudioAttributes;
-import android.media.AudioFormat;
-import android.media.AudioTrack;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,6 +22,8 @@ import androidx.core.content.ContextCompat;
 
 import com.example.indicpipeline.R;
 import com.example.indicpipeline.LangConfig;
+import com.example.indicpipeline.TtsEngine;
+import com.example.indicpipeline.IndicToUroman;
 import com.example.indicpipeline.language.LanguageCatalog;
 import com.example.indicpipeline.call.CallConfig;
 import com.example.indicpipeline.call.livekit.CallSessionManager;
@@ -35,12 +35,10 @@ import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.auth.repository.UserRepository;
 import com.example.indicpipeline.auth.repository.AuthRepository;
 import com.google.firebase.auth.FirebaseAuth;
-
 import java.util.Locale;
 
 /**
  * Active call screen.
- *
  * Responsibilities:
  * - Render UI strictly from CallStateManager
  * - Connect LiveKit when permissions are ready
@@ -67,6 +65,11 @@ public class CallActivity extends AppCompatActivity {
     private User localUser;
     private LangConfig localLang;
     private LangConfig remoteLang;
+    // Local TTS speaking flag (mirrors MainActivity behavior)
+    private volatile boolean isSpeaking = false;
+    private TtsEngine receiverTtsEngine;
+    private String receiverTtsFolder;
+    private final Object receiverTtsLock = new Object();
 
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private long connectedAtMs = 0L;
@@ -85,7 +88,7 @@ public class CallActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_call);
-        
+
         Log.i(TAG, "====================================================");
         Log.i(TAG, "[VERSION_TAG] CALL_ACTIVITY_V3_HANDSHAKE_TRACE");
         Log.i(TAG, "====================================================");
@@ -111,6 +114,7 @@ public class CallActivity extends AppCompatActivity {
         btnMute = findViewById(R.id.btnMute);
         btnSpeaker = findViewById(R.id.btnSpeaker);
         btnEnd = findViewById(R.id.btnEndCall);
+        // btnTtsTest removed in rollback - no debug button
 
         tvRoom.setText("Room: " + (roomId == null ? "-" : roomId));
         tvDuration.setText("00:00");
@@ -123,13 +127,19 @@ public class CallActivity extends AppCompatActivity {
             callManager.handleRemoteEnded(callEvent.callId);
         });
 
+        // Initial button state (will be updated when connected)
         btnMute.setSelected(false);
+        btnMute.setText("Mute");
         btnSpeaker.setSelected(true);
 
         btnMute.setOnClickListener(v -> {
             if (sessionManager != null) {
                 Log.i(TAG, "[CALL_FLOW] Mute button clicked");
                 sessionManager.toggleMute();
+                boolean isMuted = sessionManager.isMuted();
+                if (pipelineManager != null) {
+                    pipelineManager.setMuted(isMuted);
+                }
                 updateMuteButton();
             }
         });
@@ -147,6 +157,8 @@ public class CallActivity extends AppCompatActivity {
             callManager.endCall();
             finish();
         });
+
+        // Debug TTS test removed
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -222,12 +234,26 @@ public class CallActivity extends AppCompatActivity {
             if (remoteLang != null) {
                 runOnUiThread(() -> tvRemoteParticipantLanguage.setText("Language: " + remoteLang.name));
                 initializePipeline();
+                
+                // PRE-LOAD the TTS Engine for my own language to avoid delays on first translation
+                new Thread(() -> {
+                    try {
+                        Log.i(TAG, "[PIPELINE] Pre-loading TTS Engine...");
+                        ensureReceiverTtsEngine(localLang != null ? localLang : remoteLang);
+                    } catch (Exception e) {
+                        Log.e(TAG, "[PIPELINE] Failed to pre-load TTS: " + e.getMessage());
+                    }
+                }).start();
             }
         });
 
         sessionManager.getIncomingTranscription().observe(this, text -> {
             if (text == null) return;
             Log.i(TAG, "[PIPELINE] Incoming transcription: " + text);
+            runOnUiThread(() -> {
+                layoutRemoteSpeech.setVisibility(View.VISIBLE);
+                tvRemoteTranslatedText.setText((tvRemoteParticipant.getText() == null ? "Peer" : tvRemoteParticipant.getText().toString()) + " said: " + text);
+            });
         });
 
         sessionManager.getIncomingTranslation().observe(this, text -> {
@@ -237,10 +263,9 @@ public class CallActivity extends AppCompatActivity {
                 layoutRemoteSpeech.setVisibility(View.VISIBLE);
                 tvRemoteTranslatedText.setText(text);
             });
+            // Receiver synthesizes the translated text locally using TTS
+            new Thread(() -> handleRemoteTranslation(text)).start();
         });
-
-        // Use direct listener instead of LiveData to prevent chunk loss
-        sessionManager.setAudioDataListener(this::playReceivedAudio);
 
         new Thread(() -> {
             String userIdentity = FirebaseAuth.getInstance().getCurrentUser() == null
@@ -290,6 +315,10 @@ public class CallActivity extends AppCompatActivity {
 
         Log.i(TAG, "[PIPELINE] Starting deterministic initialization: " + localLang.name + " (Source) -> " + remoteLang.name + " (Target)");
         pipelineManager = new CallPipelineManager(this);
+        // Sync the initial mute state
+        if (sessionManager != null) {
+            pipelineManager.setMuted(sessionManager.isMuted());
+        }
         pipelineManager.setListener(new CallPipelineManager.PipelineListener() {
             @Override
             public void onLoadingProgress(String message) {
@@ -303,13 +332,6 @@ public class CallActivity extends AppCompatActivity {
                     Log.i(TAG, "[PIPELINE] " + status);
                     tvStatus.setText(status);
                     pipelineManager.start();
-                    
-                    // Mute the raw LiveKit microphone so peers only hear the translated output
-                    if (sessionManager != null && !sessionManager.isMuted()) {
-                        Log.i(TAG, "[PIPELINE] Muting raw microphone for translated call");
-                        sessionManager.toggleMute();
-                        updateMuteButton();
-                    }
                 });
             }
 
@@ -327,13 +349,8 @@ public class CallActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     tvLocalTranslatedText.setText(text);
                 });
+                // Send the translated text to remote peer
                 sessionManager.sendTranslation(text);
-            }
-
-            @Override
-            public void onTranslatedAudioReady(byte[] audioBytes) {
-                Log.i(TAG, "[PIPELINE] Pushing translated audio to WebRTC track (" + audioBytes.length + " bytes)");
-                sessionManager.pushAudio(audioBytes);
             }
 
             @Override
@@ -346,104 +363,109 @@ public class CallActivity extends AppCompatActivity {
         pipelineManager.initialize(localLang, remoteLang);
     }
 
-    private AudioTrack persistentAudioTrack;
-    private final java.util.concurrent.BlockingQueue<byte[]> playbackQueue = new java.util.concurrent.LinkedBlockingQueue<>();
-    private Thread playbackThread;
-    private volatile boolean isPlaybackRunning = false;
-
-    private void initPlayback() {
-        if (isPlaybackRunning) return;
-        isPlaybackRunning = true;
-        playbackThread = new Thread(() -> {
-            try {
-                int sampleRate = 16000;
-                int minBufSize = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_FLOAT);
-                Log.i(TAG, "[AUDIO] Initializing persistent AudioTrack. minBufferSize: " + minBufSize);
-                
-                persistentAudioTrack = new AudioTrack.Builder()
-                        .setAudioAttributes(new AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                                .build())
-                        .setAudioFormat(new AudioFormat.Builder()
-                                .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                                .setSampleRate(sampleRate)
-                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                .build())
-                        .setTransferMode(AudioTrack.MODE_STREAM)
-                        .setBufferSizeInBytes(Math.max(minBufSize, 16000 * 4)) // 1s buffer
-                        .build();
-
-                persistentAudioTrack.play();
-                android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
-                boolean isSpeaker = am != null && am.isSpeakerphoneOn();
-                Log.i(TAG, "[AUDIO] playback started (STATE: " + persistentAudioTrack.getState() + ") Speakerphone: " + isSpeaker);
-
-                while (isPlaybackRunning) {
-                    byte[] data = playbackQueue.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS);
-                    if (data == null) continue;
-
-                    Log.d(TAG, "[AUDIO] Processing chunk from queue: " + data.length + " bytes");
-                    
-                    float[] floatArray = new float[data.length / 4];
-                    java.nio.ByteBuffer.wrap(data).order(java.nio.ByteOrder.LITTLE_ENDIAN).asFloatBuffer().get(floatArray);
-                    
-                    int written = persistentAudioTrack.write(floatArray, 0, floatArray.length, AudioTrack.WRITE_BLOCKING);
-                    if (written < 0) {
-                        Log.e(TAG, "[AUDIO] AudioTrack write error: " + written);
-                    } else if (written < floatArray.length) {
-                        Log.w(TAG, "[AUDIO] Partial write: " + written + "/" + floatArray.length);
-                    } else {
-                        Log.i(TAG, "[AUDIO] AudioTrack write success: " + written + " floats");
-                        Log.i(TAG, "[AUDIO] playback active");
-                    }
-                }
-            } catch (InterruptedException e) {
-                Log.i(TAG, "[AUDIO] Playback thread interrupted");
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                Log.e(TAG, "[AUDIO] Playback thread CRITICAL ERROR", e);
-            } finally {
-                if (persistentAudioTrack != null) {
-                    try {
-                        persistentAudioTrack.stop();
-                        persistentAudioTrack.release();
-                    } catch (Exception ignored) {}
-                    persistentAudioTrack = null;
-                }
-                Log.i(TAG, "[AUDIO] Playback thread finished");
+    // --- Receiver: handle incoming translation and speak locally ---
+    private void handleRemoteTranslation(String translatedText) {
+        Log.i(TAG, "[TRACE] handleRemoteTranslation ENTER with text: " + translatedText);
+        try {
+            if (translatedText == null || translatedText.trim().isEmpty()) {
+                Log.w(TAG, "[TRACE] [LOCAL_TTS] Received empty translation; skipping.");
+                return;
             }
-        });
-        playbackThread.start();
+
+            synchronized (receiverTtsLock) {
+                if (isSpeaking) {
+                    Log.w(TAG, "[TRACE] [LOCAL_TTS] Already speaking; dropping overlapping translation.");
+                    return;
+                }
+                isSpeaking = true;
+                Log.d(TAG, "[TRACE] isSpeaking set to TRUE");
+            }
+
+            // Choose the receiver's own language for local TTS.
+            LangConfig myLang = localLang;
+            if (myLang == null) {
+                if (remoteLang != null) {
+                    myLang = remoteLang;
+                    Log.w(TAG, "[TRACE] [LOCAL_TTS] localLang unavailable, falling back to remoteLang: " + myLang.name);
+                } else {
+                    myLang = LanguageCatalog.getSupportedLanguages().get(0);
+                    Log.w(TAG, "[TRACE] [LOCAL_TTS] localLang and remoteLang unavailable, falling back to default: " + myLang.name);
+                }
+            }
+
+            Log.i(TAG, "[TRACE] [LOCAL_TTS] Incoming translation: " + translatedText);
+            runOnUiThread(() -> {
+                layoutRemoteSpeech.setVisibility(View.VISIBLE);
+                tvRemoteTranslatedText.setText(translatedText);
+                tvStatus.setText("Incoming... Speaking...");
+            });
+
+            // Pass the raw translated text (Native Script) directly to TTS.
+            // Transliteration was found to cause 'noise' because the model vocab expects native characters.
+
+            if (pipelineManager != null) {
+                Log.d(TAG, "[TRACE] Notifying pipeline manager to pause (isSpeaking=true)");
+                pipelineManager.setSpeaking(true);
+                pipelineManager.clearAudioQueue();
+            }
+
+            long ttsTime = 0;
+            try {
+                Log.d(TAG, "[TRACE] Ensuring TTS Engine is ready...");
+                ensureReceiverTtsEngine(myLang);
+                
+                Log.i(TAG, "[TRACE] [LOCAL_TTS] Synthesizing in voice: " + myLang.name);
+                ttsTime = receiverTtsEngine.speak(translatedText);
+                Log.i(TAG, "[TRACE] [LOCAL_TTS] speak() COMPLETED, took: " + ttsTime + " ms");
+            } catch (Exception e) {
+                Log.e(TAG, "[TRACE] [LOCAL_TTS] Synthesis error: " + e.getMessage(), e);
+            } finally {
+                synchronized (receiverTtsLock) {
+                    isSpeaking = false;
+                    Log.d(TAG, "[TRACE] isSpeaking set to FALSE");
+                }
+                if (pipelineManager != null) {
+                    Log.d(TAG, "[TRACE] Notifying pipeline manager to resume (isSpeaking=false)");
+                    pipelineManager.setSpeaking(false);
+                }
+            }
+
+            runOnUiThread(() -> {
+                tvStatus.setText("Listening...");
+            });
+            Log.i(TAG, "[TRACE] handleRemoteTranslation EXIT");
+        } catch (Exception e) {
+            Log.e(TAG, "[TRACE] [LOCAL_TTS] handleRemoteTranslation failed: " + e.getMessage(), e);
+            runOnUiThread(() -> tvStatus.setText("Incoming processing failed."));
+        }
     }
 
-    private void stopPlayback() {
-        Log.i(TAG, "[AUDIO] Stopping playback...");
-        isPlaybackRunning = false;
-        if (playbackThread != null) playbackThread.interrupt();
-        playbackQueue.clear();
-    }
-
-    private void playReceivedAudio(byte[] audioData) {
-        if (audioData == null || audioData.length == 0) {
-            Log.w(TAG, "[PIPELINE] Received empty/null audio data chunk");
+    private synchronized void ensureReceiverTtsEngine(LangConfig myLang) throws Exception {
+        if (myLang == null) {
+            throw new IllegalStateException("Receiver language unavailable");
+        }
+        String folder = myLang.ttsFolder;
+        if (receiverTtsEngine != null && folder != null && folder.equals(receiverTtsFolder)) {
             return;
         }
-        
-        if (!isPlaybackRunning) {
-            Log.i(TAG, "[PIPELINE] Playback not running, initializing...");
-            initPlayback();
+        if (receiverTtsEngine != null) {
+            try {
+                receiverTtsEngine.close();
+            } catch (Exception e) {
+                Log.w(TAG, "[LOCAL_TTS] Failed to close old receiver TTS: " + e.getMessage());
+            }
         }
-        
-        Log.i(TAG, "[PIPELINE] peer audio chunk received: " + audioData.length + " bytes");
-        Log.i(TAG, "[AUDIO] enqueue playback buffer");
-        boolean added = playbackQueue.offer(audioData);
-        if (!added) {
-            Log.e(TAG, "[PIPELINE] Playback queue FULL, dropping chunk!");
-        } else {
-            Log.d(TAG, "[PIPELINE] Chunk added to playback queue. Size: " + playbackQueue.size());
-        }
+        receiverTtsEngine = new TtsEngine(this, null, folder);
+        receiverTtsFolder = folder;
     }
+
+    // The previous receiver audio-focus / routing hacks were reverted.
+    // Receiver now follows the MainActivity pattern: update UI, apply in-call route, and call TtsEngine.speak()
+
+    // Removed: persistentAudioTrack, playbackQueue, playbackThread, isPlaybackRunning
+    // Removed: initPlayback(), stopPlayback(), playReceivedAudio()
+    // These were part of the incorrect audio streaming architecture
+    // Correct architecture: receiver receives TEXT and does local TTS
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -524,18 +546,20 @@ public class CallActivity extends AppCompatActivity {
 
     private void updateMuteButton() {
         boolean muted = sessionManager != null && sessionManager.isMuted();
+        Log.d(TAG, "[MUTE_UI] Updating button: muted=" + muted);
         btnMute.setSelected(muted);
         btnMute.setText(muted ? "Unmute" : "Mute");
         btnMute.setAlpha(muted ? 0.6f : 1.0f);
-        Log.i(TAG, "Mute: " + (muted ? "ON" : "OFF"));
+        Log.i(TAG, "[MUTE_UI] Button updated: " + (muted ? "MUTED (Unmute button)" : "ACTIVE (Mute button)"));
     }
 
     private void updateSpeakerButton() {
         boolean speakerOn = sessionManager != null && sessionManager.isSpeakerOn();
+        Log.d(TAG, "[SPEAKER_UI] Updating button: speaker=" + speakerOn);
         btnSpeaker.setSelected(speakerOn);
         btnSpeaker.setText(speakerOn ? "Speaker" : "Earpiece");
         btnSpeaker.setAlpha(speakerOn ? 1.0f : 0.6f);
-        Log.i(TAG, "Speaker: " + (speakerOn ? "ON" : "OFF"));
+        Log.i(TAG, "[SPEAKER_UI] Button updated: " + (speakerOn ? "SPEAKER ON" : "EARPIECE ON"));
     }
 
     private void startTimer() {
@@ -566,10 +590,37 @@ public class CallActivity extends AppCompatActivity {
         return String.format(Locale.US, "%02d:%02d", minutes, seconds);
     }
 
+    private void applyInCallAudioRoute(boolean speakerphone) {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am == null) return;
+            
+            if (speakerphone) {
+                // If speaker is requested, use MODE_NORMAL and USAGE_MEDIA (now in TtsEngine)
+                // this is the most reliable way to force audio to the loud speaker.
+                am.setMode(android.media.AudioManager.MODE_NORMAL);
+                am.setSpeakerphoneOn(true);
+            } else {
+                // If earpiece is requested, we must use MODE_IN_COMMUNICATION
+                am.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+                am.setSpeakerphoneOn(false);
+            }
+            Log.i(TAG, "[AUDIO_ROUTE] Applied: Speakerphone=" + speakerphone + " Mode=" + am.getMode());
+        } catch (Exception e) {
+            Log.w(TAG, "[AUDIO_ROUTE] Failed to apply in-call route: " + e.getMessage());
+        }
+    }
+
     @Override
     protected void onDestroy() {
         Log.i(TAG, "CallActivity onDestroy");
-        stopPlayback();
+        if (receiverTtsEngine != null) {
+            try {
+                receiverTtsEngine.close();
+            } catch (Exception e) {
+                Log.w(TAG, "[LOCAL_TTS] Failed to close receiver TTS: " + e.getMessage());
+            }
+        }
         if (pipelineManager != null) {
             pipelineManager.stop();
         }

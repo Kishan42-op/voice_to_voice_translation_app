@@ -11,6 +11,7 @@ import com.example.indicpipeline.R;
 import com.example.indicpipeline.core.Resource;
 import com.example.indicpipeline.models.User;
 import com.example.indicpipeline.shell.viewmodel.ContactsViewModel;
+import com.example.indicpipeline.shell.viewmodel.FriendRequestViewModel;
 import com.example.indicpipeline.utils.AvatarUtils;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -20,6 +21,7 @@ import com.google.android.material.textview.MaterialTextView;
 
 public class FriendDetailActivity extends AppCompatActivity {
     private ContactsViewModel viewModel;
+    private FriendRequestViewModel friendRequestViewModel;
     private CircularProgressIndicator progressIndicator;
     private MaterialCardView avatarCard;
     private MaterialTextView initialsView;
@@ -29,6 +31,7 @@ public class FriendDetailActivity extends AppCompatActivity {
     private MaterialButton callButton;
     private MaterialButton messageButton;
     private MaterialToolbar toolbar;
+    private boolean isFriend;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +39,8 @@ public class FriendDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_friend_detail);
 
         viewModel = new ViewModelProvider(this).get(ContactsViewModel.class);
+        friendRequestViewModel = new ViewModelProvider(this).get(FriendRequestViewModel.class);
+        friendRequestViewModel.setContext(this);
 
         toolbar = findViewById(R.id.toolbarFriendDetail);
         progressIndicator = findViewById(R.id.progressFriendDetail);
@@ -56,6 +61,7 @@ public class FriendDetailActivity extends AppCompatActivity {
         String friendName = getIntent().getStringExtra("friend_name");
         String friendUsername = getIntent().getStringExtra("friend_username");
         String friendEmail = getIntent().getStringExtra("friend_email");
+        isFriend = getIntent().getBooleanExtra("is_friend", true); // Default to true for backwards compatibility
 
         // Display from intent data first
         if (friendName != null) {
@@ -72,13 +78,8 @@ public class FriendDetailActivity extends AppCompatActivity {
             initialsView.setText(initials);
         }
 
-        callButton.setOnClickListener(v -> {
-            // Start outgoing call flow using SignalingRepository / socket
-            Intent i = new Intent(this, com.example.indicpipeline.ui.call.OutgoingCallActivity.class);
-            i.putExtra("targetUid", friendUid);
-            i.putExtra("targetName", friendName);
-            startActivity(i);
-        });
+        // Setup buttons based on friendship status
+        setupActionButtons(friendUid, friendName, isFriend);
 
         messageButton.setOnClickListener(v -> {
             // Placeholder for future messaging
@@ -107,6 +108,27 @@ public class FriendDetailActivity extends AppCompatActivity {
                         displayFriendDetails(user);
                     }
                 }
+            });
+        }
+    }
+
+    private void setupActionButtons(String friendUid, String friendName, boolean isFriend) {
+        if (isFriend) {
+            // Show call button for friends
+            callButton.setVisibility(View.VISIBLE);
+            callButton.setText(R.string.friend_detail_call_button);
+            callButton.setOnClickListener(v -> {
+                Intent intent = new Intent(this, com.example.indicpipeline.ui.call.OutgoingCallActivity.class);
+                intent.putExtra("targetUid", friendUid);
+                intent.putExtra("targetName", friendName);
+                startActivity(intent);
+            });
+        } else {
+            // Show send friend request button for non-friends
+            callButton.setVisibility(View.VISIBLE);
+            callButton.setText(R.string.shell_friend_request_send);
+            callButton.setOnClickListener(v -> {
+                friendRequestViewModel.sendFriendRequest(friendUid);
             });
         }
     }

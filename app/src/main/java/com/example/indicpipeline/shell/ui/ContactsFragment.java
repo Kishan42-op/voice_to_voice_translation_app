@@ -96,14 +96,14 @@ public class ContactsFragment extends Fragment {
 
             @Override
             public void onUserClick(User user) {
-                openFriendDetail(user);
+                openFriendDetail(user, false); // false = not a friend
             }
         });
 
         friendsAdapter = new ContactCardAdapter(new ContactCardAdapter.OnContactActionListener() {
             @Override
             public void onContactClick(User user) {
-                openFriendDetail(user);
+                openFriendDetail(user, true); // true = isFriend
             }
 
             @Override
@@ -253,7 +253,7 @@ public class ContactsFragment extends Fragment {
         return getString(R.string.shell_search_no_results);
     }
 
-    private void openFriendDetail(User user) {
+    private void openFriendDetail(User user, boolean isFriend) {
         if (user == null || user.getUid() == null) {
             return;
         }
@@ -262,6 +262,7 @@ public class ContactsFragment extends Fragment {
         intent.putExtra("friend_username", user.getUsername());
         intent.putExtra("friend_name", user.getName());
         intent.putExtra("friend_email", user.getEmail());
+        intent.putExtra("is_friend", isFriend);
         startActivity(intent);
     }
 
