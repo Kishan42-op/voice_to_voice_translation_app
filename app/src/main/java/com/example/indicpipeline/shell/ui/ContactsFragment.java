@@ -211,11 +211,17 @@ public class ContactsFragment extends Fragment {
             }
         });
 
-        if (savedInstanceState == null) {
-            currentSearchQuery = getText(searchInput);
-            friendRequestViewModel.searchUsers(currentSearchQuery);
-            contactsViewModel.loadFriends();
-        }
+        currentSearchQuery = getText(searchInput);
+        setUsersLoading(true);
+        setFriendsLoading(true);
+        showUsersEmpty(true);
+        showFriendsEmpty(true);
+        usersEmptyText.setText(R.string.loading_users);
+        friendsEmptyText.setText(R.string.loading_friends);
+        recyclerUsers.setVisibility(View.GONE);
+        recyclerFriends.setVisibility(View.GONE);
+        friendRequestViewModel.searchUsers(currentSearchQuery);
+        contactsViewModel.loadFriends();
     }
 
     private void renderUsers(List<UserConnectionItem> items) {
