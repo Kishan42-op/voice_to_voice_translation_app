@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.indicpipeline.auth.repository.AuthRepository;
 import com.example.indicpipeline.auth.repository.UserRepository;
 import com.example.indicpipeline.core.Resource;
+import com.example.indicpipeline.models.PreferredLanguage;
 import com.example.indicpipeline.models.User;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -15,6 +16,7 @@ public class ProfileViewModel extends ViewModel {
     private final UserRepository userRepository = new UserRepository();
     private final MutableLiveData<Resource<User>> profileState = new MutableLiveData<>();
     private final MutableLiveData<Resource<Boolean>> logoutState = new MutableLiveData<>();
+    private final MutableLiveData<Resource<User>> updateLanguageState = new MutableLiveData<>();
 
     public LiveData<Resource<User>> getProfileState() {
         return profileState;
@@ -24,12 +26,20 @@ public class ProfileViewModel extends ViewModel {
         return logoutState;
     }
 
+    public LiveData<Resource<User>> getUpdateLanguageState() {
+        return updateLanguageState;
+    }
+
     public void clearLogoutState() {
         logoutState.setValue(null);
     }
 
     public void clearProfileState() {
         profileState.setValue(null);
+    }
+
+    public void clearUpdateLanguageState() {
+        updateLanguageState.setValue(null);
     }
 
     public void loadProfile() {
@@ -50,6 +60,29 @@ public class ProfileViewModel extends ViewModel {
             @Override
             public void onError(String message) {
                 profileState.postValue(Resource.error(message));
+            }
+        });
+    }
+
+    public void updatePreferredLanguage(PreferredLanguage newLanguage) {
+        updateLanguageState.setValue(Resource.loading());
+        FirebaseUser currentUser = authRepository.getCurrentUser();
+        if (currentUser == null) {
+            updateLanguageState.setValue(Resource.error("User session not found."));
+            return;
+        }
+
+        userRepository.updatePreferredLanguage(currentUser.getUid(), newLanguage, new AuthRepository.AuthResultCallback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                updateLanguageState.postValue(Resource.success(user));
+                // Reload profile to update the UI
+                loadProfile();
+            }
+
+            @Override
+            public void onError(String message) {
+                updateLanguageState.postValue(Resource.error(message));
             }
         });
     }
