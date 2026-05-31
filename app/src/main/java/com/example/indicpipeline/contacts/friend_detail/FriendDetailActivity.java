@@ -117,6 +117,7 @@ public class FriendDetailActivity extends AppCompatActivity {
             // Show call button for friends
             callButton.setVisibility(View.VISIBLE);
             callButton.setText(R.string.friend_detail_call_button);
+            callButton.setIconResource(R.drawable.ic_call);
             callButton.setOnClickListener(v -> {
                 Intent intent = new Intent(this, com.example.indicpipeline.ui.call.OutgoingCallActivity.class);
                 intent.putExtra("targetUid", friendUid);
@@ -127,6 +128,7 @@ public class FriendDetailActivity extends AppCompatActivity {
             // Show send friend request button for non-friends
             callButton.setVisibility(View.VISIBLE);
             callButton.setText(R.string.shell_friend_request_send);
+            callButton.setIconResource(android.R.drawable.ic_input_add);
             callButton.setOnClickListener(v -> {
                 friendRequestViewModel.sendFriendRequest(friendUid);
             });
