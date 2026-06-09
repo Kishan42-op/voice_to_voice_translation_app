@@ -8,10 +8,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
-import android.widget.Button;
+import com.google.android.material.button.MaterialButton;
 import android.widget.TextView;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -53,7 +54,8 @@ public class CallActivity extends AppCompatActivity {
     private TextView tvRoom, tvStatus, tvDuration, tvRemoteParticipant, tvRemoteParticipantLanguage;
     private TextView tvLocalSpokenText, tvLocalTranslatedText, tvRemoteTranslatedText;
     private LinearLayout layoutLocalSpeech, layoutRemoteSpeech;
-    private Button btnMute, btnSpeaker, btnEnd;
+    private MaterialButton btnMute, btnSpeaker, btnEnd;
+    private TextView tvMuteLabel, tvSpeakerLabel;
 
     private String callId, roomId, token;
     private CallSessionManager sessionManager;
@@ -114,6 +116,8 @@ public class CallActivity extends AppCompatActivity {
         btnMute = findViewById(R.id.btnMute);
         btnSpeaker = findViewById(R.id.btnSpeaker);
         btnEnd = findViewById(R.id.btnEndCall);
+        tvMuteLabel = findViewById(R.id.tvMuteLabel);
+        tvSpeakerLabel = findViewById(R.id.tvSpeakerLabel);
         // btnTtsTest removed in rollback - no debug button
 
         tvRoom.setText("Room: " + (roomId == null ? "-" : roomId));
@@ -129,8 +133,16 @@ public class CallActivity extends AppCompatActivity {
 
         // Initial button state (will be updated when connected)
         btnMute.setSelected(false);
-        btnMute.setText("Mute");
         btnSpeaker.setSelected(true);
+        // Buttons are icon-only in the layout; set initial icons and accessibility labels
+        try {
+            btnMute.setIconResource(R.drawable.ic_mic);
+            btnMute.setContentDescription(getString(R.string.desc_mute_button));
+            btnSpeaker.setIconResource(R.drawable.ic_speaker);
+            btnSpeaker.setContentDescription(getString(R.string.desc_speaker_button));
+        } catch (Exception e) {
+            Log.w(TAG, "[UI_INIT] Failed to set initial icons: " + e.getMessage());
+        }
 
         btnMute.setOnClickListener(v -> {
             if (sessionManager != null) {
@@ -141,6 +153,7 @@ public class CallActivity extends AppCompatActivity {
                     pipelineManager.setMuted(isMuted);
                 }
                 updateMuteButton();
+                Toast.makeText(this, isMuted ? "Microphone muted" : "Microphone unmuted", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -149,6 +162,8 @@ public class CallActivity extends AppCompatActivity {
                 Log.i(TAG, "[CALL_FLOW] Speaker button clicked");
                 sessionManager.toggleSpeaker();
                 updateSpeakerButton();
+                boolean speakerOn = sessionManager.isSpeakerOn();
+                Toast.makeText(this, speakerOn ? "Speaker: Loud" : "Speaker: Earpiece", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -217,8 +232,27 @@ public class CallActivity extends AppCompatActivity {
             }
         });
 
-        sessionManager.getRemoteParticipantName().observe(this, name ->
-                Log.i(TAG, "Remote participant name=" + name));
+        sessionManager.getRemoteParticipantName().observe(this, remoteUid -> {
+            Log.i(TAG, "Remote participant connected: " + remoteUid);
+            if (remoteUid != null && !remoteUid.trim().isEmpty()) {
+                // Fetch the full User document from Firebase just like friends loading does
+                userRepository.getUserDocument(remoteUid, new AuthRepository.AuthResultCallback<User>() {
+                    @Override
+                    public void onSuccess(User user) {
+                        String displayName = user.getName() != null ? user.getName() : remoteUid;
+                        Log.i(TAG, "Remote participant user document loaded: " + displayName);
+                        runOnUiThread(() -> tvRemoteParticipant.setText(displayName));
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        Log.w(TAG, "Failed to load remote participant user document: " + message);
+                        // Fallback to the UID if user lookup fails
+                        runOnUiThread(() -> tvRemoteParticipant.setText(remoteUid));
+                    }
+                });
+            }
+        });
 
         sessionManager.getConnectionError().observe(this, error -> {
             if (error != null) {
@@ -273,7 +307,7 @@ public class CallActivity extends AppCompatActivity {
                     : FirebaseAuth.getInstance().getCurrentUser().getUid();
             String liveKitUrl = CallConfig.LIVEKIT_URL;
 
-            // Fetch local user profile to get preferred language
+            // Fetch local user profile to get preferred language and display name
             userRepository.getUserDocument(userIdentity, new AuthRepository.AuthResultCallback<User>() {
                 @Override
                 public void onSuccess(User user) {
@@ -281,13 +315,16 @@ public class CallActivity extends AppCompatActivity {
                     if (user.getPreferredLanguage() != null) {
                         localLang = LanguageCatalog.findByName(user.getPreferredLanguage().getName());
                     }
-                    Log.i(TAG, "Connecting to LiveKit: url=" + liveKitUrl + " room=" + roomId + " identity=" + userIdentity);
-                    sessionManager.connect(liveKitUrl, roomId, token, userIdentity);
+                    // Use user's display name for LiveKit connection instead of UID
+                    String displayName = user.getName() != null ? user.getName() : userIdentity;
+                    Log.i(TAG, "Connecting to LiveKit: url=" + liveKitUrl + " room=" + roomId + " identity=" + userIdentity + " displayName=" + displayName);
+                    sessionManager.connect(liveKitUrl, roomId, token, displayName);
                 }
 
                 @Override
                 public void onError(String message) {
                     Log.e(TAG, "Failed to load local user profile: " + message);
+                    // Fallback to userIdentity if user fetch fails
                     sessionManager.connect(liveKitUrl, roomId, token, userIdentity);
                 }
             });
@@ -511,7 +548,8 @@ public class CallActivity extends AppCompatActivity {
             case CONNECTED:
                 terminalDismissScheduled = false;
                 tvStatus.setText("Connected");
-                tvRemoteParticipant.setText(callManager.getPeerName() == null ? "" : callManager.getPeerName());
+                // Remote participant name comes from LiveKit observer, not from callManager
+                // tvRemoteParticipant will be updated when remote participant connects via observer
                 startTimer();
                 break;
             case REJECTED:
@@ -548,8 +586,18 @@ public class CallActivity extends AppCompatActivity {
         boolean muted = sessionManager != null && sessionManager.isMuted();
         Log.d(TAG, "[MUTE_UI] Updating button: muted=" + muted);
         btnMute.setSelected(muted);
-        btnMute.setText(muted ? "Unmute" : "Mute");
-        btnMute.setAlpha(muted ? 0.6f : 1.0f);
+        // Update label text
+        if (tvMuteLabel != null) {
+            tvMuteLabel.setText(muted ? "Unmute" : "Mute");
+        }
+        // Icon-only button: update content description for accessibility
+        btnMute.setContentDescription(muted ? getString(R.string.desc_mute_button) + ": muted" : getString(R.string.desc_mute_button) + ": unmuted");
+        // Icon selection (state-based color tint is handled by color state list)
+        try {
+            btnMute.setIconResource(muted ? R.drawable.ic_mic_off : R.drawable.ic_mic);
+        } catch (Exception e) {
+            Log.w(TAG, "[MUTE_UI] Failed to set icon resource: " + e.getMessage());
+        }
         Log.i(TAG, "[MUTE_UI] Button updated: " + (muted ? "MUTED (Unmute button)" : "ACTIVE (Mute button)"));
     }
 
@@ -557,8 +605,17 @@ public class CallActivity extends AppCompatActivity {
         boolean speakerOn = sessionManager != null && sessionManager.isSpeakerOn();
         Log.d(TAG, "[SPEAKER_UI] Updating button: speaker=" + speakerOn);
         btnSpeaker.setSelected(speakerOn);
-        btnSpeaker.setText(speakerOn ? "Speaker" : "Earpiece");
-        btnSpeaker.setAlpha(speakerOn ? 1.0f : 0.6f);
+        // Update label text
+        if (tvSpeakerLabel != null) {
+            tvSpeakerLabel.setText(speakerOn ? "Speaker" : "Earpiece");
+        }
+        // Icon-only button: update content description for accessibility
+        btnSpeaker.setContentDescription(speakerOn ? getString(R.string.desc_speaker_button) + ": speaker" : getString(R.string.desc_speaker_button) + ": earpiece");
+        try {
+            btnSpeaker.setIconResource(speakerOn ? R.drawable.ic_speaker : R.drawable.ic_speaker_off);
+        } catch (Exception e) {
+            Log.w(TAG, "[SPEAKER_UI] Failed to set icon resource: " + e.getMessage());
+        }
         Log.i(TAG, "[SPEAKER_UI] Button updated: " + (speakerOn ? "SPEAKER ON" : "EARPIECE ON"));
     }
 

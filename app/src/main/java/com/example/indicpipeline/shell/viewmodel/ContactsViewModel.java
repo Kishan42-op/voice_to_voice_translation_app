@@ -28,12 +28,12 @@ public class ContactsViewModel extends ViewModel {
     private final MutableLiveData<Resource<User>> friendDetailState = new MutableLiveData<>();
 
     private ListenerRegistration friendsRegistration;
-    private ListenerRegistration friendsMetadataRegistration;
     private ListenerRegistration searchRegistration;
 
     private String currentUserUid;
     private String currentSearchQuery = "";
     private final List<User> latestFriendData = new ArrayList<>();
+    private final List<UserConnectionItem> latestSearchMatches = new ArrayList<>();
 
     public LiveData<Resource<List<UserConnectionItem>>> getFriendsState() {
         return friendsState;
@@ -59,6 +59,7 @@ public class ContactsViewModel extends ViewModel {
         }
 
         currentUserUid = currentUser.getUid();
+        clearFriendsListener();
         friendsState.setValue(Resource.loading());
 
         friendsRegistration = contactsRepository.getFriends(currentUserUid, new ContactsRepository.FriendsCallback() {
@@ -83,6 +84,7 @@ public class ContactsViewModel extends ViewModel {
     public void searchContacts(String query) {
         String normalizedQuery = query == null ? "" : query.trim();
         if (normalizedQuery.equals(currentSearchQuery) && searchRegistration != null) {
+            publishSearchResults();
             return;
         }
 
@@ -98,7 +100,7 @@ public class ContactsViewModel extends ViewModel {
 
         currentUserUid = currentUser.getUid();
 
-        searchRegistration = userRepository.searchUsers(normalizedQuery, currentUserUid, new UserRepository.UserSearchCallback() {
+        searchRegistration = userRepository.searchUsersCacheFirst(normalizedQuery, currentUserUid, new UserRepository.UserSearchCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 // Filter to only show friends
@@ -110,6 +112,8 @@ public class ContactsViewModel extends ViewModel {
                         }
                     }
                 }
+                latestSearchMatches.clear();
+                latestSearchMatches.addAll(friendMatches);
                 searchState.postValue(Resource.success(friendMatches));
             }
 
@@ -202,6 +206,10 @@ public class ContactsViewModel extends ViewModel {
         return false;
     }
 
+    private void publishSearchResults() {
+        searchState.setValue(Resource.success(new ArrayList<>(latestSearchMatches)));
+    }
+
     private void clearSearchListener() {
         if (searchRegistration != null) {
             searchRegistration.remove();
@@ -209,15 +217,17 @@ public class ContactsViewModel extends ViewModel {
         }
     }
 
+    private void clearFriendsListener() {
+        if (friendsRegistration != null) {
+            friendsRegistration.remove();
+            friendsRegistration = null;
+        }
+    }
+
     @Override
     protected void onCleared() {
         clearSearchListener();
-        if (friendsRegistration != null) {
-            friendsRegistration.remove();
-        }
-        if (friendsMetadataRegistration != null) {
-            friendsMetadataRegistration.remove();
-        }
+        clearFriendsListener();
         super.onCleared();
     }
 }

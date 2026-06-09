@@ -94,18 +94,19 @@ public class FriendRequestViewModel extends ViewModel {
     }
 
     public void searchUsers(String query) {
-        if (checkNetworkAndShowError()) {
-            searchState.setValue(Resource.error("No internet connection. Please check your WiFi or mobile data."));
-            return;
-        }
-
         String normalizedQuery = query == null ? "" : query.trim();
+        
+        // If query is same and we already have a listener, just refresh the mapping
         if (normalizedQuery.equals(currentQuery) && searchRegistration != null) {
+            publishSearchResults();
             return;
         }
 
         currentQuery = normalizedQuery;
         clearSearchListener();
+        
+        // Clear latest results so we don't show stale data while loading
+        latestSearchUsers.clear();
         searchState.setValue(Resource.loading());
 
         FirebaseUser currentUser = authRepository.getCurrentUser();
@@ -117,7 +118,7 @@ public class FriendRequestViewModel extends ViewModel {
         currentUserUid = currentUser.getUid();
         ensureRelationshipObservers();
 
-        searchRegistration = userRepository.searchUsers(normalizedQuery, currentUserUid, new UserRepository.UserSearchCallback() {
+        searchRegistration = userRepository.searchUsersCacheFirst(normalizedQuery, currentUserUid, new UserRepository.UserSearchCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 latestSearchUsers.clear();
@@ -171,6 +172,7 @@ public class FriendRequestViewModel extends ViewModel {
             @Override
             public void onSuccess(FriendRequest request) {
                 actionState.postValue(Resource.success(Boolean.TRUE));
+                // Local refresh is handled by listeners, but we can trigger publish
                 publishSearchResults();
             }
 
@@ -260,6 +262,7 @@ public class FriendRequestViewModel extends ViewModel {
 
             @Override
             public void onError(String message) {
+                // Non-fatal for search list
                 incomingRequestsState.postValue(Resource.error(message));
             }
         });
@@ -279,7 +282,7 @@ public class FriendRequestViewModel extends ViewModel {
 
             @Override
             public void onError(String message) {
-                searchState.postValue(Resource.error(message));
+                // Non-fatal for search list
             }
         });
 
@@ -299,7 +302,7 @@ public class FriendRequestViewModel extends ViewModel {
 
             @Override
             public void onError(String message) {
-                searchState.postValue(Resource.error(message));
+                // Non-fatal for search list
             }
         });
     }
@@ -307,6 +310,12 @@ public class FriendRequestViewModel extends ViewModel {
     private void publishSearchResults() {
         if (currentUserUid == null) {
             searchState.postValue(Resource.error("User session not found."));
+            return;
+        }
+
+        // Avoid premature success with empty results if search is currently loading
+        Resource<List<UserConnectionItem>> currentState = searchState.getValue();
+        if (latestSearchUsers.isEmpty() && currentState != null && currentState.getStatus() == Resource.Status.LOADING) {
             return;
         }
 

@@ -54,6 +54,7 @@ public class ContactsFragment extends Fragment {
 
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
+    private TextWatcher searchTextWatcher;
     private String currentSearchQuery = "";
 
     public ContactsFragment() {
@@ -114,18 +115,16 @@ public class ContactsFragment extends Fragment {
 
         recyclerUsers.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerUsers.setAdapter(usersAdapter);
-        recyclerUsers.setHasFixedSize(true);
 
         recyclerFriends.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerFriends.setAdapter(friendsAdapter);
-        recyclerFriends.setHasFixedSize(true);
 
         searchRunnable = () -> {
             currentSearchQuery = getText(searchInput);
             friendRequestViewModel.searchUsers(currentSearchQuery);
         };
 
-        searchInput.addTextChangedListener(new TextWatcher() {
+        searchTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -137,7 +136,8 @@ public class ContactsFragment extends Fragment {
 
             @Override
             public void afterTextChanged(Editable s) {}
-        });
+        };
+        searchInput.addTextChangedListener(searchTextWatcher);
 
         friendRequestViewModel.getSearchState().observe(getViewLifecycleOwner(), state -> {
             if (state == null) return;
@@ -145,9 +145,7 @@ public class ContactsFragment extends Fragment {
             if (state.getStatus() == Resource.Status.LOADING) {
                 setUsersLoading(true);
                 showError(null);
-                showUsersEmpty(true);
-                usersEmptyText.setText(R.string.loading_users);
-                recyclerUsers.setVisibility(View.GONE);
+                // Keep the current list or empty placeholder while loading
                 return;
             }
 
@@ -155,7 +153,8 @@ public class ContactsFragment extends Fragment {
                 setUsersLoading(false);
                 usersAdapter.submitList(Collections.emptyList());
                 showError(state.getMessage());
-                showUsersEmpty(false);
+                showUsersEmpty(true);
+                usersEmptyText.setText(state.getMessage());
                 recyclerUsers.setVisibility(View.GONE);
                 return;
             }
@@ -173,17 +172,14 @@ public class ContactsFragment extends Fragment {
             if (state.getStatus() == Resource.Status.LOADING) {
                 setFriendsLoading(true);
                 showError(null);
-                showFriendsEmpty(true);
-                friendsEmptyText.setText(R.string.loading_friends);
-                recyclerFriends.setVisibility(View.GONE);
                 return;
             }
 
             if (state.getStatus() == Resource.Status.ERROR) {
                 setFriendsLoading(false);
                 friendsAdapter.submitList(Collections.emptyList());
-                showError(state.getMessage());
-                showFriendsEmpty(false);
+                showFriendsEmpty(true);
+                friendsEmptyText.setText(state.getMessage());
                 recyclerFriends.setVisibility(View.GONE);
                 return;
             }
@@ -202,24 +198,28 @@ public class ContactsFragment extends Fragment {
                 setUsersLoading(false);
                 setFriendsLoading(false);
                 showError(state.getMessage());
+                friendRequestViewModel.clearActionState();
+                return;
             }
 
             if (state.getStatus() == Resource.Status.SUCCESS) {
                 showError(null);
+                // Re-fetch to update lists
                 friendRequestViewModel.searchUsers(currentSearchQuery);
                 contactsViewModel.loadFriends();
+                friendRequestViewModel.clearActionState();
             }
         });
 
+        // Initial setup and trigger loads
         currentSearchQuery = getText(searchInput);
         setUsersLoading(true);
         setFriendsLoading(true);
-        showUsersEmpty(true);
-        showFriendsEmpty(true);
-        usersEmptyText.setText(R.string.loading_users);
-        friendsEmptyText.setText(R.string.loading_friends);
+        showUsersEmpty(false);
+        showFriendsEmpty(false);
         recyclerUsers.setVisibility(View.GONE);
         recyclerFriends.setVisibility(View.GONE);
+        
         friendRequestViewModel.searchUsers(currentSearchQuery);
         contactsViewModel.loadFriends();
     }
@@ -231,7 +231,9 @@ public class ContactsFragment extends Fragment {
             if (item == null || item.getUser() == null) {
                 continue;
             }
-            if (item.getRelationshipStatus() != RelationshipStatus.FRIENDS) {
+            // Only show users who are not already friends and not ourselves
+            RelationshipStatus status = item.getRelationshipStatus();
+            if (status != RelationshipStatus.FRIENDS && status != RelationshipStatus.SELF) {
                 visibleUsers.add(item);
             }
         }
@@ -239,8 +241,12 @@ public class ContactsFragment extends Fragment {
         usersAdapter.submitList(visibleUsers);
         boolean empty = visibleUsers.isEmpty();
         showUsersEmpty(empty);
-        usersEmptyText.setText(getUsersEmptyMessage());
-        recyclerUsers.setVisibility(empty ? View.GONE : View.VISIBLE);
+        if (empty) {
+            usersEmptyText.setText(getUsersEmptyMessage());
+            recyclerUsers.setVisibility(View.GONE);
+        } else {
+            recyclerUsers.setVisibility(View.VISIBLE);
+        }
     }
 
     private void renderFriends(List<UserConnectionItem> items) {
@@ -318,6 +324,9 @@ public class ContactsFragment extends Fragment {
     @Override
     public void onDestroyView() {
         searchHandler.removeCallbacks(searchRunnable);
+        if (searchInput != null && searchTextWatcher != null) {
+            searchInput.removeTextChangedListener(searchTextWatcher);
+        }
         super.onDestroyView();
     }
 }

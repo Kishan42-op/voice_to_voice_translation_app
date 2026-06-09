@@ -15,7 +15,8 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.Source;
 import com.google.firebase.firestore.Transaction;
 
 import java.util.ArrayList;
@@ -186,6 +187,25 @@ public class UserRepository {
     public ListenerRegistration searchUsers(String query, String currentUserId, UserSearchCallback callback) {
         String normalizedQuery = normalizeSearchQuery(query);
 
+        Query firestoreQuery = buildSearchQuery(normalizedQuery);
+
+        return firestoreQuery.addSnapshotListener((snapshot, error) -> {
+            if (error != null) {
+                callback.onError(AuthErrorMapper.map(error));
+                return;
+            }
+
+            callback.onSuccess(mapUsers(snapshot, currentUserId));
+        });
+    }
+
+    public ListenerRegistration searchUsersCacheFirst(String query, String currentUserId, UserSearchCallback callback) {
+        // Firestore snapshot listeners already return cached data immediately if available (cache-first behavior).
+        // No need for a separate cache fetch which causes race conditions.
+        return searchUsers(query, currentUserId, callback);
+    }
+
+    private Query buildSearchQuery(String normalizedQuery) {
         Query firestoreQuery = firestore.collection("users")
                 .orderBy("username")
                 .limit(50);
@@ -198,27 +218,29 @@ public class UserRepository {
                     .limit(50);
         }
 
-        return firestoreQuery.addSnapshotListener((snapshot, error) -> {
-            if (error != null) {
-                callback.onError(AuthErrorMapper.map(error));
-                return;
-            }
+        return firestoreQuery;
+    }
 
-            List<User> users = new ArrayList<>();
-            if (snapshot != null) {
-                for (QueryDocumentSnapshot document : snapshot) {
-                    User user = document.toObject(User.class);
-                    if (user.getUid() == null) {
-                        user.setUid(document.getId());
-                    }
-                    if (currentUserId != null && currentUserId.equals(user.getUid())) {
-                        continue;
-                    }
-                    users.add(user);
-                }
+    private List<User> mapUsers(QuerySnapshot snapshot, String currentUserId) {
+        List<User> users = new ArrayList<>();
+        if (snapshot == null) {
+            return users;
+        }
+
+        for (DocumentSnapshot document : snapshot.getDocuments()) {
+            User user = document.toObject(User.class);
+            if (user == null) {
+                continue;
             }
-            callback.onSuccess(users);
-        });
+            if (user.getUid() == null) {
+                user.setUid(document.getId());
+            }
+            if (currentUserId != null && currentUserId.equals(user.getUid())) {
+                continue;
+            }
+            users.add(user);
+        }
+        return users;
     }
 
     private String normalizeUsername(String username) {
