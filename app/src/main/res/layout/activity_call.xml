@@ -176,37 +176,101 @@
             android:padding="16dp"
             android:gravity="center">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnMute"
-                style="@style/Widget.Material3.Button.TonalButton"
+            <!-- Mute Control: vertical layout with icon and label -->
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Mute"
-                android:textAllCaps="false"
-                app:iconGravity="textStart" />
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_gravity="center_vertical">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSpeaker"
-                style="@style/Widget.Material3.Button.TonalButton"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMute"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:padding="12dp"
+                    android:contentDescription="@string/desc_mute_button"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    app:icon="@drawable/ic_mic"
+                    app:iconSize="28dp"
+                    app:iconTint="@color/button_mute_tint" />
+
+                <TextView
+                    android:id="@+id/tvMuteLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mute"
+                    android:textSize="11sp"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginTop="6dp"
+                    android:textAlignment="center" />
+            </LinearLayout>
+
+            <!-- Speaker Control: vertical layout with icon and label -->
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginHorizontal="8dp"
-                android:text="Speaker"
-                android:textAllCaps="false"
-                app:iconGravity="textStart" />
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_gravity="center_vertical">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEndCall"
-                style="@style/Widget.Material3.Button"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSpeaker"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:padding="12dp"
+                    android:contentDescription="@string/desc_speaker_button"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    app:icon="@drawable/ic_speaker"
+                    app:iconSize="28dp"
+                    app:iconTint="@color/button_speaker_tint" />
+
+                <TextView
+                    android:id="@+id/tvSpeakerLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Speaker"
+                    android:textSize="11sp"
+                    android:textColor="@color/app_on_surface"
+                    android:layout_marginTop="6dp"
+                    android:textAlignment="center" />
+            </LinearLayout>
+
+            <!-- End Call button -->
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="End"
-                android:textAllCaps="false"
-                app:backgroundTint="@color/app_error"
-                app:iconGravity="textStart" />
+                android:layout_marginStart="8dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEndCall"
+                    style="@style/Widget.Material3.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="12dp"
+                    android:text="End Call"
+                    android:textSize="14sp"
+                    app:backgroundTint="@color/app_error"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
