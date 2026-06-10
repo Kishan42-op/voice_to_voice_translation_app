@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Muted state (White icon on Red background) -->
+    <item android:state_selected="true" android:color="@color/white" />
+    <!-- Unmuted state (Primary icon on Surface background) -->
+    <item android:color="@color/app_primary" />
+</selector>

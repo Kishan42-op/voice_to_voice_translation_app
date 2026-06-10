@@ -189,17 +189,21 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMute"
                     style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:padding="12dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="16dp"
                     android:contentDescription="@string/desc_mute_button"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
                     app:icon="@drawable/ic_mic"
-                    app:iconSize="28dp"
-                    app:iconTint="@color/button_mute_tint" />
+                    app:iconSize="32dp"
+                    app:iconTint="@color/button_mute_tint"
+                    app:backgroundTint="@color/button_mute_background_tint"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="@color/app_outline"
+                    app:strokeWidth="1dp" />
 
                 <TextView
                     android:id="@+id/tvMuteLabel"
@@ -225,17 +229,21 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSpeaker"
                     style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:padding="12dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="16dp"
                     android:contentDescription="@string/desc_speaker_button"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
                     app:icon="@drawable/ic_speaker"
-                    app:iconSize="28dp"
-                    app:iconTint="@color/button_speaker_tint" />
+                    app:iconSize="32dp"
+                    app:iconTint="@color/button_speaker_tint"
+                    app:backgroundTint="@color/button_speaker_background_tint"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="@color/app_outline"
+                    app:strokeWidth="1dp" />
 
                 <TextView
                     android:id="@+id/tvSpeakerLabel"
@@ -270,6 +278,13 @@
                     app:backgroundTint="@color/app_error"
                     app:cornerRadius="12dp" />
 
+                <!-- Hidden label to keep alignment if needed, or remove it -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="11sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
         </LinearLayout>
